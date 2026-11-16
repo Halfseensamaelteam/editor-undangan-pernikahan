@@ -1,0 +1,1612 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="data:," />
+    <title>Editor Undangan Pernikahan</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Great+Vibes&family=Jost:wght@400;500;600&family=Montserrat:wght@400;500;600;700&family=Pinyon+Script&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+      :root {
+        --bg: #1b1b1f;
+        --panel: #26262c;
+        --panel2: #303038;
+        --panel3: #3a3a44;
+        --line: #454551;
+        --txt: #f3f1ea;
+        --mut: #a8a49a;
+        --acc: #c9a24b;
+        --acc-ink: #241c08;
+        --sel: #4f9dd8;
+        --danger: #e0685f;
+        --radius: 10px;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: "Jost", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--txt);
+        overflow: hidden;
+        -webkit-tap-highlight-color: transparent;
+      }
+      button, [role="button"], select, summary, input:not([type="checkbox"], [type="radio"]) { min-height: 2.25rem; }
+      button { font-family: inherit; cursor: pointer; }
+      svg.ic { width: 20px; height: 20px; flex: none; display: block; }
+
+      /* ---------- App frame ---------- */
+      #app { display: flex; flex-direction: column; height: 100dvh; }
+      header.topbar {
+        display: flex; align-items: center; gap: 6px;
+        padding: 6px 10px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+        z-index: 30;
+      }
+      .tpl-name { font-size: 15px; font-weight: 600; letter-spacing: .02em; white-space: nowrap; }
+      .tpl-name small { display: block; font-size: 11px; font-weight: 400; color: var(--mut); letter-spacing: .04em; }
+      .spacer { flex: 1; }
+      .tbtn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+        min-width: 40px; padding: 0 10px;
+        background: transparent; color: var(--txt);
+        border: 1px solid transparent; border-radius: 8px; font-size: 14px;
+      }
+      .tbtn:hover { background: var(--panel2); }
+      .tbtn:disabled { opacity: .35; cursor: default; background: transparent; }
+      .tbtn.primary { background: var(--acc); color: var(--acc-ink); font-weight: 600; }
+      .tbtn.primary:hover { background: #d8b25c; }
+      .tbtn .lbl { display: none; }
+      @media (min-width: 720px) { .tbtn .lbl { display: inline; } }
+
+      #dlwrap { position: relative; }
+      #dlmenu {
+        position: absolute; right: 0; top: calc(100% + 8px); width: 250px;
+        background: var(--panel2); border: 1px solid var(--line); border-radius: 12px;
+        padding: 6px; box-shadow: 0 14px 40px rgba(0,0,0,.5); display: none; z-index: 60;
+      }
+      #dlmenu.open { display: block; }
+      #dlmenu button {
+        display: flex; width: 100%; align-items: center; gap: 10px; text-align: left;
+        background: transparent; border: 0; color: var(--txt); border-radius: 8px;
+        padding: 9px 10px; font-size: 14px; min-height: 44px;
+      }
+      #dlmenu button:hover { background: var(--panel3); }
+      #dlmenu button small { display: block; color: var(--mut); font-size: 12px; }
+      #dlmenu button:disabled { opacity: .5; }
+
+      main.workspace { flex: 1; display: flex; min-height: 0; }
+
+      /* ---------- Stage ---------- */
+      #stage {
+        position: relative; flex: 1; min-width: 0;
+        overflow: auto; display: flex;
+        background:
+          radial-gradient(1200px 700px at 50% 30%, #26262c 0%, #17171b 70%);
+      }
+      #sizer { margin: auto; position: relative; flex: none; }
+      #board {
+        position: absolute; left: 0; top: 0;
+        width: 1000px; height: 1414px;
+        transform-origin: 0 0;
+        box-shadow: 0 18px 60px rgba(0,0,0,.55), 0 2px 10px rgba(0,0,0,.5);
+        overflow: hidden;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      #board .decor { position: absolute; inset: 0; pointer-events: none; }
+      #board .decor svg { width: 100%; height: 100%; display: block; }
+      .el { position: absolute; cursor: grab; }
+      .el:active { cursor: grabbing; }
+      .el-text {
+        white-space: pre-wrap; word-break: break-word;
+        line-height: 1.25; padding: 0; margin: 0;
+      }
+      .el-img { overflow: hidden; }
+      .el-img img { position: absolute; max-width: none; pointer-events: none; }
+      .el-div { display: flex; align-items: center; }
+      .el-div svg { width: 100%; display: block; }
+      #selbox {
+        position: absolute; pointer-events: none; display: none; z-index: 50;
+        outline: calc(2px * var(--inv, 1)) solid var(--sel);
+        outline-offset: calc(3px * var(--inv, 1));
+      }
+      #selbox .handle {
+        position: absolute; right: 0; bottom: 0;
+        width: calc(30px * var(--inv, 1)); height: calc(30px * var(--inv, 1));
+        transform: translate(50%, 50%);
+        background: var(--sel); border-radius: 50%;
+        border: calc(3px * var(--inv, 1)) solid #fff;
+        pointer-events: auto; cursor: nwse-resize; touch-action: none;
+      }
+
+      #selbar {
+        position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+        display: none; gap: 4px; z-index: 40;
+        background: rgba(28,28,34,.94); border: 1px solid var(--line);
+        border-radius: 999px; padding: 4px;
+        box-shadow: 0 8px 24px rgba(0,0,0,.45);
+      }
+      #selbar.show { display: flex; }
+      #selbar button {
+        display: inline-flex; align-items: center; gap: 6px;
+        background: transparent; border: 0; color: var(--txt);
+        border-radius: 999px; padding: 0 12px; font-size: 13px; min-height: 36px;
+      }
+      #selbar button:hover { background: var(--panel3); }
+      #selbar button.danger { color: #ff9d94; }
+      #selbar svg.ic { width: 17px; height: 17px; }
+
+      #zoomctl {
+        position: absolute; right: 10px; bottom: 10px; z-index: 40;
+        display: flex; align-items: center; gap: 2px;
+        background: rgba(28,28,34,.94); border: 1px solid var(--line);
+        border-radius: 999px; padding: 3px;
+      }
+      #zoomctl button {
+        width: 38px; height: 38px; border-radius: 50%; border: 0;
+        background: transparent; color: var(--txt); font-size: 18px;
+        display: inline-flex; align-items: center; justify-content: center;
+      }
+      #zoomctl button:hover { background: var(--panel3); }
+      #zoomctl .pct { min-width: 46px; text-align: center; font-size: 13px; color: var(--mut); }
+
+      /* ---------- Panel ---------- */
+      aside.panel {
+        width: 324px; flex: none; display: flex; flex-direction: column;
+        background: var(--panel); border-left: 1px solid var(--line); z-index: 20;
+      }
+      .tabs { display: flex; gap: 2px; padding: 8px 8px 0; }
+      .tabs button {
+        flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+        background: transparent; border: 0; border-bottom: 2px solid transparent;
+        color: var(--mut); font-size: 12px; padding: 7px 2px 8px; min-height: 52px;
+        border-radius: 8px 8px 0 0;
+      }
+      .tabs button svg.ic { width: 21px; height: 21px; }
+      .tabs button.on { color: var(--txt); border-bottom-color: var(--acc); background: var(--panel2); }
+      .tabbody { flex: 1; overflow-y: auto; padding: 14px; -webkit-overflow-scrolling: touch; }
+      .tabbody h3 { margin: 0 0 10px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--mut); font-weight: 600; }
+      .tabbody h3:not(:first-child) { margin-top: 20px; }
+      .hint { color: var(--mut); font-size: 14px; line-height: 1.55; }
+
+      .tplcards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .tplcard {
+        border: 2px solid var(--line); border-radius: 10px; overflow: hidden;
+        background: var(--panel2); padding: 0; color: var(--txt); text-align: center;
+      }
+      .tplcard.on { border-color: var(--acc); }
+      .tplcard .thumb { display: block; height: 74px; position: relative; }
+      .tplcard .thumb::after {
+        content: ""; position: absolute; inset: 8px;
+        border: 1.5px solid currentColor; border-radius: 3px; opacity: .55;
+      }
+      .tplcard .nm { display: block; font-size: 12px; padding: 6px 2px 8px; line-height: 1.25; }
+
+      .swrow { display: flex; flex-wrap: wrap; gap: 8px; }
+      .sw {
+        width: 38px; height: 38px; border-radius: 50%; flex: none;
+        border: 2px solid rgba(255,255,255,.18); padding: 0; position: relative;
+      }
+      .sw.on { border-color: var(--sel); box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--sel); }
+      .sw.custom {
+        display: inline-flex; align-items: center; justify-content: center;
+        background: conic-gradient(#e0685f, #e8b34b, #7d9478, #4f9dd8, #9a7bc0, #e0685f);
+        color: #fff; font-size: 18px; font-weight: 600; overflow: hidden;
+      }
+      .sw.custom input { position: absolute; inset: 0; opacity: 0; cursor: pointer; min-height: 0; }
+
+      .addbtn {
+        display: flex; align-items: center; gap: 12px; width: 100%;
+        background: var(--panel2); border: 1px solid var(--line); color: var(--txt);
+        border-radius: var(--radius); padding: 12px 14px; font-size: 15px; margin-bottom: 10px;
+        text-align: left; min-height: 52px;
+      }
+      .addbtn:hover { background: var(--panel3); }
+      .addbtn small { display: block; color: var(--mut); font-size: 12.5px; }
+      .addbtn svg.ic { width: 24px; height: 24px; color: var(--acc); }
+
+      textarea.edit-text {
+        width: 100%; min-height: 74px; resize: vertical;
+        background: var(--panel2); border: 1px solid var(--line); border-radius: var(--radius);
+        color: var(--txt); font-family: inherit; font-size: 15px; padding: 10px 12px; line-height: 1.45;
+      }
+      textarea.edit-text:focus { outline: 2px solid var(--sel); outline-offset: 0; border-color: transparent; }
+
+      .fontgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .fontchip {
+        background: var(--panel2); border: 1.5px solid var(--line); color: var(--txt);
+        border-radius: var(--radius); padding: 8px 6px; min-height: 52px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+      }
+      .fontchip.on { border-color: var(--acc); }
+      .fontchip .sample { font-size: 19px; line-height: 1.15; white-space: nowrap; }
+      .fontchip .fname { font-size: 10.5px; color: var(--mut); font-family: "Jost", sans-serif; }
+
+      .fontcurrent {
+        display: flex; align-items: center; gap: 12px; width: 100%;
+        background: var(--panel2); border: 1.5px solid var(--line); color: var(--txt);
+        border-radius: var(--radius); padding: 10px 12px; margin-bottom: 10px; text-align: left;
+        min-height: 58px;
+      }
+      .fontcurrent:hover { background: var(--panel3); }
+      .fontcurrent .fc-sample { font-size: 23px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46%; }
+      .fontcurrent .fc-meta { flex: 1; min-width: 0; }
+      .fontcurrent .fc-meta b { display: block; font-size: 14.5px; font-family: "Jost", sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .fontcurrent .fc-meta small { color: var(--mut); font-size: 12px; font-family: "Jost", sans-serif; }
+      .fontcurrent .fc-chev { font-size: 26px; color: var(--mut); flex: none; }
+
+      /* ---------- Pemilih font ---------- */
+      #fontpicker {
+        position: fixed; inset: 0; z-index: 180; display: none;
+        background: var(--bg);
+      }
+      #fontpicker.open { display: block; }
+      .fp-inner { display: flex; flex-direction: column; height: 100%; max-width: 680px; margin: 0 auto; }
+      @media (min-width: 720px) {
+        #fontpicker { background: rgba(8, 8, 10, .62); padding: 4dvh 18px; }
+        .fp-inner { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+      }
+      .fp-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 6px; }
+      .fp-head .back {
+        width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--line);
+        background: var(--panel2); color: var(--txt); font-size: 19px; flex: none;
+        display: inline-flex; align-items: center; justify-content: center;
+      }
+      .fp-title { font-size: 18px; font-weight: 600; }
+      .fp-title small { display: block; font-size: 12.5px; font-weight: 400; color: var(--mut); }
+      .fp-search { padding: 6px 14px 10px; }
+      .fp-search input {
+        width: 100%; background: var(--panel2); border: 1px solid var(--line);
+        border-radius: 999px; color: var(--txt); font-family: inherit; font-size: 16px;
+        padding: 11px 18px; min-height: 46px;
+      }
+      .fp-search input:focus { outline: 2px solid var(--sel); border-color: transparent; }
+      .fp-cats { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 14px 12px; }
+      .fp-cats button {
+        border: 1.5px solid var(--line); background: var(--panel2); color: var(--txt);
+        border-radius: 999px; padding: 0 15px; font-size: 13.5px; min-height: 38px;
+      }
+      .fp-cats button.on { border-color: var(--acc); background: var(--panel3); }
+      .fp-list { flex: 1; overflow-y: auto; padding: 0 8px 10px; -webkit-overflow-scrolling: touch; }
+      .fp-row {
+        display: flex; align-items: center; gap: 12px; width: 100%;
+        background: transparent; border: 0; border-bottom: 1px solid var(--line);
+        color: var(--txt); padding: 11px 10px; min-height: 62px; text-align: left; border-radius: 6px;
+      }
+      .fp-row.on { background: var(--panel2); box-shadow: inset 0 0 0 1.5px var(--acc); }
+      .fp-row .fp-sample { flex: 1; font-size: 25px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .fp-row .fp-meta { flex: none; text-align: right; max-width: 40%; }
+      .fp-row .fp-meta b { display: block; font-size: 13px; font-family: "Jost", sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .fp-row .fp-meta small { font-size: 11.5px; color: var(--mut); font-family: "Jost", sans-serif; }
+      .fp-row .fp-check { color: var(--acc); font-size: 19px; flex: none; }
+      .fp-more {
+        display: block; width: calc(100% - 12px); margin: 12px auto 4px;
+        background: var(--panel2); border: 1px solid var(--line); color: var(--txt);
+        border-radius: 999px; min-height: 46px; font-size: 14.5px;
+      }
+      .fp-foot {
+        display: flex; align-items: center; gap: 12px;
+        padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--line); background: var(--panel);
+      }
+      .fp-foot span { flex: 1; font-size: 14px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .fp-foot span b { color: var(--txt); }
+      .fp-foot button {
+        background: var(--acc); color: var(--acc-ink); border: 0; font-weight: 600;
+        border-radius: 999px; padding: 0 24px; min-height: 46px; font-size: 15px;
+      }
+
+      .ctl { margin-bottom: 14px; }
+      .ctl label { display: flex; justify-content: space-between; font-size: 13px; color: var(--mut); margin-bottom: 6px; }
+      .ctl label output { color: var(--txt); font-weight: 500; }
+      input[type="range"] { width: 100%; accent-color: var(--acc); min-height: 32px; padding: 0; }
+
+      .segrow { display: flex; gap: 6px; flex-wrap: wrap; }
+      .seg {
+        flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        background: var(--panel2); border: 1.5px solid var(--line); color: var(--txt);
+        border-radius: 9px; padding: 0 8px; font-size: 14px; min-height: 42px; min-width: 44px;
+      }
+      .seg.on { border-color: var(--acc); background: var(--panel3); }
+      .seg svg.ic { width: 18px; height: 18px; }
+
+      .actrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .actbtn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        background: var(--panel2); border: 1px solid var(--line); color: var(--txt);
+        border-radius: 9px; padding: 0 10px; font-size: 14px; min-height: 44px;
+      }
+      .actbtn:hover { background: var(--panel3); }
+      .actbtn.danger { color: #ff9d94; }
+      .actbtn svg.ic { width: 18px; height: 18px; }
+
+      .nudgepad { display: grid; grid-template-columns: repeat(3, 48px); gap: 6px; justify-content: center; }
+      .nudgepad button {
+        height: 44px; border-radius: 9px; border: 1px solid var(--line);
+        background: var(--panel2); color: var(--txt); font-size: 17px;
+        display: inline-flex; align-items: center; justify-content: center;
+      }
+      .nudgepad button:hover { background: var(--panel3); }
+      .nudgepad .blank { visibility: hidden; }
+
+      .layeritem {
+        display: flex; align-items: center; gap: 8px; width: 100%;
+        background: var(--panel2); border: 1.5px solid var(--line); color: var(--txt);
+        border-radius: 9px; padding: 8px 8px 8px 12px; margin-bottom: 7px; text-align: left;
+        min-height: 48px; font-size: 14px;
+      }
+      .layeritem.on { border-color: var(--sel); }
+      .layeritem .tag { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--acc); flex: none; }
+      .layeritem .snip { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--txt); }
+      .layeritem .mv { display: flex; flex-direction: column; gap: 2px; flex: none; }
+      .layeritem .mv button {
+        min-height: 0; height: 21px; width: 34px; padding: 0; border-radius: 5px;
+        background: var(--panel3); border: 0; color: var(--txt); font-size: 11px; line-height: 1;
+      }
+
+      /* ---------- Inline text editor overlay ---------- */
+      #textedit {
+        position: fixed; z-index: 100; display: none;
+        border: 2px solid var(--sel); border-radius: 4px;
+        background: rgba(255,255,255,.96); padding: 2px 4px;
+        resize: none; overflow: hidden;
+      }
+      #textedit:focus { outline: none; }
+
+      /* ---------- Preview ---------- */
+      #exitPreview {
+        position: fixed; top: 12px; right: 12px; z-index: 200; display: none;
+        background: var(--acc); color: var(--acc-ink); border: 0; font-weight: 600;
+        border-radius: 999px; padding: 0 18px; min-height: 44px; font-size: 15px;
+        box-shadow: 0 8px 24px rgba(0,0,0,.4);
+      }
+      body.preview header.topbar, body.preview aside.panel,
+      body.preview #selbar, body.preview #zoomctl { display: none; }
+      body.preview #exitPreview { display: block; }
+      body.preview #board { box-shadow: 0 24px 80px rgba(0,0,0,.6); }
+
+      /* ---------- Toast ---------- */
+      #toast {
+        position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 20px);
+        background: #101014; color: var(--txt); border: 1px solid var(--line);
+        border-radius: 999px; padding: 11px 18px; font-size: 14px; z-index: 300;
+        opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s;
+        box-shadow: 0 10px 30px rgba(0,0,0,.5); max-width: min(92vw, 480px); text-align: center;
+      }
+      #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+      /* ---------- Mobile layout ---------- */
+      @media (max-width: 859px) {
+        main.workspace { flex-direction: column; }
+        #stage { padding-bottom: 60px; }
+        aside.panel {
+          width: auto; border-left: 0; border-top: 1px solid var(--line);
+          height: 43dvh; flex: none;
+        }
+        .tabs { order: 2; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
+        .tabs button { border-bottom: 0; border-top: 2px solid transparent; border-radius: 0 0 8px 8px; }
+        .tabs button.on { border-top-color: var(--acc); }
+        .tabbody { order: 1; padding: 12px 14px; }
+        .tpl-name small { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="tpl-name"><span id="tplName">Klasik Emas</span><small>Undangan Pernikahan · 10 × 14,8 cm</small></div>
+        <div class="spacer"></div>
+        <button class="tbtn" id="undoBtn" title="Urungkan (Undo)" aria-label="Urungkan">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+        </button>
+        <button class="tbtn" id="redoBtn" title="Ulangi (Redo)" aria-label="Ulangi">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>
+        </button>
+        <button class="tbtn" id="previewBtn" title="Pratinjau">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span class="lbl">Pratinjau</span>
+        </button>
+        <div id="dlwrap">
+          <button class="tbtn primary" id="dlBtn">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 21h16"/></svg>
+            <span class="lbl">Unduh</span>
+          </button>
+          <div id="dlmenu" role="menu">
+            <button id="dlPdf">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
+              <span>PDF siap cetak<small>A5 · 300 DPI · untuk dibawa ke percetakan</small></span>
+            </button>
+            <button id="dlPng">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L6 21"/></svg>
+              <span>PNG resolusi tinggi<small>2480 × 3508 px · 300 DPI</small></span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section id="stage">
+          <div id="sizer">
+            <div id="board">
+              <div class="decor" id="decor"></div>
+              <div id="layerHost"></div>
+              <div id="selbox"><div class="handle" id="resizeHandle"></div></div>
+            </div>
+          </div>
+          <div id="selbar">
+            <button id="sbDup">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Duplikat
+            </button>
+            <button id="sbFront">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+              Ke depan
+            </button>
+            <button id="sbBack">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              Ke belakang
+            </button>
+            <button id="sbDel" class="danger">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+              Hapus
+            </button>
+          </div>
+          <div id="zoomctl">
+            <button id="zoomOut" aria-label="Perkecil">−</button>
+            <span class="pct" id="zoomPct">100%</span>
+            <button id="zoomIn" aria-label="Perbesar">+</button>
+            <button id="zoomFit" aria-label="Pas ke layar" style="font-size:12.5px; width:auto; padding:0 10px;">Pas</button>
+          </div>
+        </section>
+
+        <aside class="panel">
+          <nav class="tabs" id="tabs">
+            <button data-tab="template" class="on">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+              Template
+            </button>
+            <button data-tab="tambah">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+              Tambah
+            </button>
+            <button data-tab="edit">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+              Edit
+            </button>
+            <button data-tab="lapisan">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg>
+              Lapisan
+            </button>
+          </nav>
+          <div class="tabbody" id="tabbody"></div>
+        </aside>
+      </main>
+    </div>
+
+    <div id="fontpicker" role="dialog" aria-label="Pilih font">
+      <div class="fp-inner">
+        <div class="fp-head">
+          <button class="back" id="fpClose" aria-label="Kembali">←</button>
+          <div class="fp-title">Pilih Font<small id="fpCount"></small></div>
+        </div>
+        <div class="fp-search">
+          <input type="search" id="fpSearch" placeholder="Cari font… coba: script, cinzel, dancing" autocomplete="off" />
+        </div>
+        <div class="fp-cats" id="fpCats">
+          <button data-cat="all" class="on">Semua</button>
+          <button data-cat="fav">Favorit Undangan</button>
+          <button data-cat="0">Serif Elegan</button>
+          <button data-cat="3">Script &amp; Kaligrafi</button>
+          <button data-cat="1">Sans Modern</button>
+          <button data-cat="2">Dekoratif</button>
+          <button data-cat="4">Monospace</button>
+        </div>
+        <div class="fp-list" id="fpList"></div>
+        <div class="fp-foot">
+          <span id="fpCurrent"></span>
+          <button id="fpDone">Selesai</button>
+        </div>
+      </div>
+    </div>
+
+    <textarea id="textedit" aria-label="Edit teks"></textarea>
+    <button id="exitPreview">Selesai · Kembali Edit</button>
+    <div id="toast" role="status"></div>
+    <input type="file" id="fileInput" accept="image/*" hidden />
+
+    <script>
+      "use strict";
+      /* ============================================================
+         Editor Undangan Pernikahan — kanvas bebas (teks & foto)
+         Satuan desain: 1000 x 1414 (rasio A-series). Ekspor 2480px.
+         ============================================================ */
+      const W = 1000, H = 1414;
+      const PHOTO_DEFAULT = "assets/foto-mempelai.webp";
+
+      const CURATED_FONTS = ["Great Vibes", "Pinyon Script", "Playfair Display", "Cormorant Garamond", "Montserrat", "Jost"];
+      const FONT_ALIAS = { vibes: "Great Vibes", pinyon: "Pinyon Script", playfair: "Playfair Display", cormorant: "Cormorant Garamond", montserrat: "Montserrat", jost: "Jost" };
+      const famName = (f) => FONT_ALIAS[f] || f;
+      const fam = (f) => '"' + famName(f) + '"';
+      const FONT_CATS = ["Serif Elegan", "Sans Modern", "Dekoratif", "Script & Kaligrafi", "Monospace"];
+      const FONT_CATALOG = [["Roboto",1],["Open Sans",1],["Google Sans",1],["Inter",1],["Montserrat",1],["Poppins",1],["Lato",1],["Arimo",1],["Roboto Condensed",1],["Roboto Mono",4],["Oswald",1],["DM Sans",1],["Playfair Display",0],["Nunito",1],["Raleway",1],["Nunito Sans",1],["Roboto Slab",0],["Manrope",1],["Rubik",1],["Outfit",1],["Kanit",1],["Ubuntu",1],["Plus Jakarta Sans",1],["Merriweather",0],["Figtree",1],["JetBrains Mono",4],["Lora",0],["Work Sans",1],["Archivo",1],["Archivo Black",1],["Bebas Neue",1],["IBM Plex Sans",1],["Barlow",1],["Mulish",1],["Quicksand",1],["Prompt",1],["PT Sans",1],["Jost",1],["Black Ops One",2],["Saira",1],["Source Code Pro",4],["Source Sans 3",1],["Inconsolata",4],["Bricolage Grotesque",1],["Space Grotesk",1],["Cormorant Garamond",0],["Share Tech",1],["Smooch Sans",1],["IBM Plex Mono",4],["Fira Sans",1],["Karla",1],["Barlow Condensed",1],["Libre Baskerville",0],["Zeyada",3],["Titillium Web",1],["Instrument Serif",0],["Fraunces",0],["Inter Tight",1],["Heebo",1],["Anton",1],["PT Serif",0],["Libre Franklin",1],["Public Sans",1],["EB Garamond",0],["Dancing Script",3],["Sora",1],["Geist",1],["Google Sans Flex",1],["Josefin Sans",1],["Changa One",2],["Cairo",1],["Urbanist",1],["Assistant",1],["Alfa Slab One",2],["Schibsted Grotesk",1],["Hind Siliguri",1],["Fjalla One",1],["Caveat",3],["DM Serif Display",0],["Lobster Two",2],["Bitter",0],["Lexend",1],["Cabin",1],["Newsreader",0],["Mukta",1],["Source Serif 4",0],["Fredoka",1],["Instrument Sans",1],["Red Hat Display",1],["Orbitron",1],["Dosis",1],["Roboto Flex",1],["Nanum Gothic",1],["Cinzel",0],["Rajdhani",1],["M PLUS Rounded 1c",1],["Merriweather Sans",1],["Geist Mono",4],["Exo 2",1],["Oxygen",1],["Barlow Semi Condensed",1],["Hanken Grotesk",1],["Hind",1],["Ramabhadra",1],["Tajawal",1],["Pacifico",3],["Slabo 27px",0],["Anek Telugu",1],["Bodoni Moda",0],["Overpass",1],["Crimson Text",0],["DM Mono",4],["Epilogue",1],["Teko",1],["Chakra Petch",1],["Arvo",0],["Baloo 2",2],["Lobster",2],["Comfortaa",2],["Domine",0],["Space Mono",4],["PT Sans Narrow",1],["Zen Kaku Gothic New",1],["Bungee",2],["Questrial",1],["Faustina",0],["Abel",1],["Asap",1],["Maven Pro",1],["Shadows Into Light",3],["Onest",1],["Be Vietnam Pro",1],["M PLUS 1p",1],["Lilita One",2],["Unbounded",1],["Marcellus",0],["Zilla Slab",0],["Great Vibes",3],["Roboto Serif",0],["Albert Sans",1],["Satisfy",3],["Spectral",0],["Geologica",1],["Archivo Narrow",1],["Almarai",1],["Syne",1],["Lexend Deca",1],["Cormorant",0],["Saira Condensed",1],["League Spartan",1],["ABeeZee",1],["Abril Fatface",2],["Play",1],["Exo",1],["IBM Plex Sans Arabic",1],["Titan One",2],["IBM Plex Serif",0],["Frank Ruhl Libre",0],["Varela Round",1],["Permanent Marker",3],["Atkinson Hyperlegible",1],["Zen Maru Gothic",1],["Nanum Myeongjo",0],["Chivo",1],["Oleo Script",2],["Sanchez",0],["Kalam",3],["Indie Flower",3],["Sarabun",1],["Gravitas One",2],["Fira Sans Condensed",1],["Sofia Sans",1],["Crimson Pro",0],["Amiri",0],["Literata",0],["Quantico",1],["Vollkorn",0],["Red Hat Text",1],["News Cycle",1],["Playfair",0],["Alegreya Sans",1],["Yellowtail",3],["Luckiest Guy",2],["Press Start 2P",2],["Fira Code",4],["Catamaran",1],["LINE Seed JP",1],["Baskervville",0],["Delius",3],["Courier Prime",4],["Andada Pro",0],["Hammersmith One",1],["Shippori Mincho",0],["DM Serif Text",0],["Montserrat Alternates",1],["Readex Pro",1],["Golos Text",1],["Cardo",0],["Righteous",2],["Google Sans Code",4],["Bree Serif",0],["Comic Neue",3],["Patrick Hand",3],["Tenor Sans",1],["Oxanium",2],["Special Elite",2],["Signika",1],["Nanum Gothic Coding",3],["Prata",0],["Encode Sans",1],["Tinos",0],["Rethink Sans",1],["Gothic A1",1],["Libre Caslon Text",0],["Alata",1],["Alegreya",0],["Hind Madurai",1],["Amatic SC",3],["Acme",1],["Lexend Giga",1],["League Gothic",1],["Aleo",0],["Rowdies",2],["Russo One",1],["BIZ UDPGothic",1],["IBM Plex Sans Condensed",1],["Shantell Sans",2],["Allura",3],["Patua One",2],["Paytone One",1],["Antonio",1],["Bangers",2],["Viga",1],["Yanone Kaffeesatz",1],["Share Tech Mono",4],["Kaushan Script",3],["Khand",1],["Fugaz One",2],["Londrina Solid",2],["Changa",1],["Noticia Text",0],["Crete Round",0],["Old Standard TT",0],["Cantarell",1],["Kumbh Sans",1],["Francois One",1],["Commissioner",1],["Courgette",3],["Passion One",2],["Alexandria",1],["Zen Old Mincho",0],["Sacramento",3],["Creepster",2],["Sawarabi Mincho",0],["Libre Barcode 39",2],["Rubik Mono One",1],["Carlito",1],["Pinyon Script",3],["STIX Two Text",0],["Audiowide",2],["Vazirmatn",1],["Neuton",0],["Gruppo",1],["Antic Slab",0],["Yantramanav",1],["Biryani",1],["Chelsea Market",2],["Gabarito",2],["VT323",4],["Cinzel Decorative",2],["Quattrocento",0],["Radio Canada",1],["Unna",0],["Sen",1],["Martel",0],["Philosopher",1],["Dela Gothic One",2],["Gilda Display",0],["Didact Gothic",1],["Saira Extra Condensed",1],["Advent Pro",1],["Rammetto One",2],["Playball",2],["Josefin Slab",0],["Parisienne",3],["PT Sans Caption",1],["Encode Sans Condensed",1],["Rokkitt",0],["Homemade Apple",3],["Tangerine",3],["Ubuntu Condensed",1],["Forum",2],["Sawarabi Gothic",1],["IBM Plex Sans Thai",1],["Amaranth",1],["Playfair Display SC",0],["Quattrocento Sans",1],["Architects Daughter",3],["Gloria Hallelujah",3],["PT Mono",4],["Bai Jamjuree",1],["Alex Brush",3],["Sofia Sans Condensed",1],["Reenie Beanie",3],["Krub",1],["Eczar",0],["Kosugi Maru",1],["Gelasio",0],["Poiret One",2],["El Messiri",1],["Actor",1],["Istok Web",1],["Host Grotesk",1],["M PLUS 1",1],["Signika Negative",1],["Lalezar",1],["Sorts Mill Goudy",0],["Abhaya Libre",0],["Andika",1],["Ubuntu Mono",4],["Asap Condensed",1],["Angkor",2],["Fira Sans Extra Condensed",1],["Yeseva One",2],["Racing Sans One",2],["Volkhov",0],["Cormorant Infant",0],["Concert One",2],["Libre Bodoni",0],["Cookie",3],["Nanum Pen Script",3],["Funnel Sans",1],["Radio Canada Big",1],["Jua",1],["Tektur",2],["Goldman",2],["Staatliches",2],["Lusitana",0],["Merienda",3],["Black Han Sans",1],["Pathway Gothic One",1],["Vidaloka",0],["Arsenal",1],["Mitr",1],["Bowlby One SC",2],["GFS Didot",0],["Besley",0],["Tiro Devanagari Hindi",0],["Mrs Saint Delafield",3],["Proza Libre",1],["Mona Sans",1],["Michroma",1],["Atkinson Hyperlegible Next",1],["Petrona",0],["Afacad",1],["Averia Serif Libre",2],["Monda",1],["Shippori Mincho B1",0],["Nothing You Could Do",3],["Belleza",1],["Familjen Grotesk",1],["Anek Bangla",1],["Sofia Sans Extra Condensed",1],["Mr Dafoe",3],["Handlee",3],["Georama",1],["Calistoga",2],["Cutive Mono",4],["Amita",3],["Rock Salt",3],["Fira Mono",4],["Caveat Brush",3],["Unica One",2],["Anonymous Pro",4],["Anek Latin",1],["Varela",1],["Pixelify Sans",2],["Young Serif",0],["Alumni Sans",1],["Alice",0],["Saira Semi Condensed",1],["Blinker",1],["Sriracha",3],["Marck Script",3],["Funnel Display",2],["Ms Madi",3],["IBM Plex Sans KR",1],["Pragati Narrow",1],["Secular One",1],["Cousine",4],["Arapey",0],["Suez One",0],["Balsamiq Sans",2],["Italianno",3],["Italiana",1],["Bowlby One",2],["Gochi Hand",3],["Reem Kufi",1],["Dongle",1],["Syncopate",1],["Zen Kaku Gothic Antique",1],["IBM Plex Sans JP",1],["Bad Script",3],["Mukta Malar",1],["Rye",2],["Gloock",0],["Wix Madefor Display",1],["Monoton",2],["Ultra",0],["Lemonada",2],["Mate",0],["Mada",1],["Caprasimo",2],["Jura",1],["Reddit Sans",1],["Grandstander",2],["Annie Use Your Telescope",3],["Hind Guntur",1],["Berkshire Swash",3],["Carter One",2],["Alegreya Sans SC",1],["Darker Grotesque",1],["Khula",1],["Fahkwang",1],["Wix Madefor Text",1],["Big Shoulders",2],["Geo",1],["MuseoModerno",2],["Taviraj",0],["Chango",2],["Sofia",3],["Damion",3],["Cuprum",1],["Pirata One",2],["Itim",3],["Shrikhand",2],["Do Hyeon",1],["Silkscreen",2],["Neucha",3],["Azeret Mono",4],["Julius Sans One",1],["Palanquin",1],["Karma",0],["Chewy",2],["Eater",2],["Murecho",1],["Six Caps",1],["Tomorrow",1],["Kaisei Decol",0],["Pangolin",3],["Charm",3],["Gantari",1],["Squada One",2],["Bevan",0],["Baloo Da 2",2],["Belanosima",1],["Cabin Condensed",1],["Gudea",1],["Spline Sans Mono",4],["Economica",1],["Knewave",2],["Libre Caslon Display",0],["M PLUS 2",1],["Parkinsans",1],["Fustat",1],["Ovo",0],["Coda",2],["Pridi",0],["Baloo Bhai 2",2],["Aboreto",2],["Oooh Baby",3],["Basic",1],["Poller One",2],["Adamina",0],["Cedarville Cursive",3],["Limelight",2],["Gowun Batang",0],["IM Fell English",0],["Hind Vadodara",1],["Bentham",0],["Nixie One",2],["Covered By Your Grace",3],["Just Another Hand",3],["Martel Sans",1],["Sarala",1],["Sintony",1],["Hachi Maru Pop",3],["Potta One",2],["Ruda",1],["Jersey 25",2],["Anuphan",1],["Martian Mono",4],["Leckerli One",3],["Ma Shan Zheng",3],["Barriecito",2],["Krona One",1],["Playpen Sans",3],["BIZ UDGothic",1],["Ropa Sans",1],["Rufina",0],["Cabin Sketch",2],["La Belle Aurore",3],["Chivo Mono",4],["BenchNine",1],["Sansita",1],["Niramit",1],["Kreon",0],["Aclonica",1],["Akshar",1],["Pontano Sans",1],["Mali",3],["Marcellus SC",0],["Shadows Into Light Two",3],["Trirong",0],["Boogaloo",2],["Livvic",1],["K2D",1],["Days One",1],["Cal Sans",1],["Lexend Zetta",1],["Overpass Mono",4],["Tiro Bangla",0],["Kiwi Maru",0],["Special Gothic Expanded One",1],["Yatra One",2],["Red Hat Mono",4],["DotGothic16",1],["Caladea",0],["Mandali",1],["Spline Sans",1],["Cantata One",0],["Glory",1],["Chonburi",2],["ZCOOL XiaoWei",1],["UnifrakturMaguntia",2],["Castoro",0],["Lateef",0],["Rozha One",0],["Afacad Flux",1],["Sofia Sans Semi Condensed",1],["Charis SIL",0],["Fredericka the Great",2],["Electrolize",1],["Hepta Slab",0],["Vina Sans",2],["Yrsa",0],["Stardos Stencil",2],["Fragment Mono",4],["Zalando Sans Expanded",1],["Palanquin Dark",1],["Baloo Bhaijaan 2",2],["Petit Formal Script",3],["Inria Serif",0],["Spinnaker",1],["Niconne",3],["TikTok Sans",1],["Yuji Mai",0],["Klee One",3],["Cormorant SC",0],["Allison",3],["Glegoo",0],["Pattaya",1],["ZCOOL KuaiLe",1],["Bellefair",0],["Vujahday Script",3],["Lexend Exa",1],["Kameron",0],["Anybody",2],["Graduate",0],["Nova Square",2],["Rampart One",2],["Mochiy Pop One",1],["Share",1],["Gowun Dodum",1],["Brygada 1918",0],["Aldrich",1],["Gaegu",3],["Oranienbaum",0],["Herr Von Muellerhoff",3],["Ubuntu Sans",1],["IM Fell English SC",0],["PT Serif Caption",0],["Pathway Extreme",1],["Tilt Warp",2],["Armata",1],["Science Gothic",1],["Zalando Sans",1],["BioRhyme",0],["Caudex",0],["Libre Barcode 128",2],["Arbutus Slab",0],["Libre Barcode 39 Text",2],["Style Script",3],["Telex",1],["Sedgwick Ave Display",3],["Averia Libre",2],["Corben",2],["Norican",3],["B612 Mono",4],["Special Gothic Condensed One",1],["Athiti",1],["Grand Hotel",3],["Halant",0],["Allerta Stencil",1],["Alef",1],["ADLaM Display",2],["Bona Nova SC",0],["Inknut Antiqua",0],["Lustria",0],["Amiko",1],["Antic Didone",0],["Enriqueta",0],["Qwitcher Grypen",3],["BIZ UDPMincho",0],["Judson",0],["Sometype Mono",4],["Kantumruy Pro",1],["Radley",0],["Podkova",0],["Rosario",1],["Aref Ruqaa",0],["Kosugi",1],["Metrophobic",1],["DynaPuff",2],["Montagu Slab",0],["Monomaniac One",1],["Lexend Peta",1],["Trocchi",0],["Monsieur La Doulaise",3],["Average Sans",1],["MedievalSharp",2],["Inria Sans",1],["B612",1],["Skranji",2],["Anton SC",1],["Mouse Memoirs",1],["Corinthia",3],["Hina Mincho",0],["Ibarra Real Nova",0],["Nanum Brush Script",3],["Marvel",1],["Kodchasan",1],["REM",1],["Ysabeau Office",1],["Doto",1],["Sniglet",2],["Hahmlet",0],["Flow Circular",2],["Sigmar One",2],["Hedvig Letters Serif",0],["Candal",1],["Rakkas",2],["Rubik Doodle Shadow",2],["Alatsi",1],["Mountains of Christmas",2],["Nobile",1],["Rancho",3],["Yusei Magic",1],["Yesteryear",3],["Cormorant Upright",0],["Bayon",1],["National Park",1],["Fondamento",3],["Chiron GoRound TC",1],["Fjord One",0],["AR One Sans",1],["Alegreya SC",0],["Reddit Sans Condensed",1],["Grenze Gotisch",2],["Marmelad",1],["Recursive",1],["Faster One",2],["Seaweed Script",2],["Bubblegum Sans",2],["Vend Sans",1],["Macondo",2],["Special Gothic",1],["Libertinus Serif",0],["Comic Relief",2],["Irish Grover",2],["Meddon",3],["Koulen",2],["Voltaire",1],["KoHo",1],["Zen Antique",0],["Schoolbell",3],["Coiny",2],["Coming Soon",3],["Hurricane",3],["Yuji Syuku",0],["Piazzolla",0],["Tilt Neon",2],["Zen Dots",2],["Cormorant Unicase",0],["RocknRoll One",1],["Overlock",2],["Arizonia",3],["Inclusive Sans",1],["Goudy Bookletter 1911",0],["Oxygen Mono",4],["Kristi",3],["Asul",0],["Red Rose",2],["MonteCarlo",3],["ZCOOL QingKe HuangYou",1],["Dawning of a New Day",3],["IBM Plex Sans Hebrew",1],["Baloo Thambi 2",2],["Turret Road",2],["Markazi Text",0],["Rouge Script",3],["Mozilla Headline",1],["Birthstone",3],["Anek Devanagari",1],["Encode Sans Expanded",1],["Bungee Inline",2],["Whisper",3],["Meow Script",3],["Megrim",2],["Scheherazade New",0],["Mukta Mahee",1],["Average",0],["Hi Melody",3],["Numans",1],["Allerta",1],["Major Mono Display",4],["Manjari",1],["Momo Trust Display",1],["Rochester",3],["Bungee Shade",2],["Spectral SC",0],["Pompiere",2],["Metamorphous",2],["Zalando Sans SemiExpanded",1],["Platypi",0],["Aguafina Script",3],["Love Ya Like A Sister",2],["Beth Ellen",3],["Anaheim",1],["Kelly Slab",2],["Asta Sans",1],["Over the Rainbow",3],["Quintessential",3],["Cherry Bomb One",2],["Kadwa",0],["Calligraffitti",3],["Zain",1],["Farro",1],["Ledger",0],["Kaisei Opti",0],["Akatab",1],["Croissant One",2],["Reggae One",2],["Shippori Antique B1",1],["Wallpoet",2],["Syne Mono",4],["Poetsen One",2],["Sansita Swashed",2],["Arima",2],["Zen Kurenaido",1],["Delicious Handrawn",3],["Ephesis",3],["Carrois Gothic",1],["McLaren",2],["WindSong",3],["Boldonse",2],["Copse",0],["Laila",0],["Fanwood Text",0],["Mr De Haviland",3],["Rubik Dirt",2],["UnifrakturCook",2],["Scada",1],["Nokora",1],["Rubik Spray Paint",2],["Square Peg",3],["Madimi One",1],["Waiting for the Sunrise",3],["Tienne",0],["Cambay",1],["Shippori Antique",1],["Lekton",4],["Nova Mono",4],["Mansalva",3],["Qwigley",3],["Agbalumo",2],["Magra",1],["BBH Bogle",1],["David Libre",0],["Della Respira",0],["Carattere",3],["Fuzzy Bubbles",3],["Gabriela",0],["Short Stack",3],["Libre Barcode 39 Extended Text",2],["Mukta Vaani",1],["Teachers",1],["Almendra",0],["Euphoria Script",3],["Hanuman",0],["Sunflower",1],["Freehand",2],["Yomogi",3],["Jersey 10",2],["Gotu",1],["Lacquer",2],["Averia Sans Libre",2],["Germania One",2],["Alike",0],["Capriola",1],["Train One",2],["Happy Monkey",2],["Bellota Text",2],["Amarante",2],["Atkinson Hyperlegible Mono",1],["Freeman",2],["Miriam Libre",1],["Sarina",2],["Fauna One",0],["Jockey One",1],["Coustard",0],["Baloo Tamma 2",2],["Battambang",2],["Alkatra",2],["Original Surfer",2],["Xanh Mono",4],["Quando",0],["Maitree",0],["LXGW WenKai TC",3],["IM Fell DW Pica",0],["Gluten",2],["Inder",1],["Cutive",0],["Sedgwick Ave",3],["Vollkorn SC",0],["Frijole",2],["Moon Dance",3],["New Rocker",2],["Protest Revolution",2],["Mozilla Text",1],["Atma",2],["Momo Signature",1],["Padauk",1],["Bitcount Single",2],["Oregano",2],["Bakbak One",2],["Encode Sans Semi Condensed",1],["Solway",0],["Balthazar",0],["Sulphur Point",1],["Vast Shadow",0],["Phudu",2],["Zen Antique Soft",0],["Stick No Bills",1],["Protest Strike",2],["Vibur",3],["Song Myung",0],["Stack Sans Headline",1],["Sour Gummy",1],["Poltawski Nowy",0],["Bagel Fat One",2],["Aladin",2],["Anta",1],["Lily Script One",2],["Borel",3],["Bona Nova",0],["Finger Paint",2],["Metal Mania",2],["Rambla",1],["Karantina",2],["Kurale",0],["Finlandica Text",1],["Prosto One",2],["Tenali Ramakrishna",1],["Contrail One",2],["Jaldi",1],["Codystar",2],["Stack Sans Text",1],["Kalnia",0],["Mallanna",1],["Modak",2],["TASA Orbiter",1],["Thasadith",1],["Aoboshi One",0],["Gamja Flower",3],["Give You Glory",3],["Just Me Again Down Here",3],["Scope One",0],["Rasa",0],["Buenard",0],["Unlock",2],["Supermercado One",2],["Uncial Antiqua",2],["Sue Ellen Francisco",3],["Gayathri",1],["Grape Nuts",3],["Stick",1],["Single Day",2],["Gurajada",1],["Baloo Chettan 2",2],["Meie Script",3],["IBM Plex Sans Thai Looped",1],["Abyssinica SIL",0],["Kode Mono",4],["Anek Malayalam",1],["Expletus Sans",2],["Ruwudu",0],["Atomic Age",2],["Alike Angular",0],["Charmonman",3],["Antic",1],["Dynalight",2],["Amiri Quran",0],["Kdam Thmor Pro",1],["Kufam",1],["Grenze",0],["Kaisei Tokumin",0],["Vesper Libre",0],["Cambo",0],["Sekuya",2],["Tiny5",2],["Orelega One",2],["Elms Sans",1],["Salsa",2],["Libre Barcode 128 Text",2],["Patrick Hand SC",3],["Slackey",2],["Imperial Script",3],["Gentium Book Plus",0],["Oleo Script Swash Caps",2],["Mochiy Pop P One",1],["Allan",2],["Rubik Glitch",2],["Alan Sans",1],["Bilbo Swash Caps",3],["Kablammo",2],["Road Rage",2],["Spicy Rice",2],["Mohave",1],["Jomhuria",2],["Fresca",1],["Imprima",1],["Rosarivo",0],["Hedvig Letters Sans",1],["Elsie",2],["Caesar Dressing",2],["Encode Sans Semi Expanded",1],["Galada",2],["Fasthand",2],["Poly",0],["Life Savers",2],["Sancreek",2],["Sarpanch",1],["Federo",1],["Ribeye",2],["Suranna",0],["Trade Winds",2],["Montez",3],["Mina",1],["League Script",3],["Ruslan Display",2],["Rubik Bubbles",2],["Darumadrop One",2],["Huninn",1],["Iceberg",2],["Gasoek One",1],["Medula One",2],["Bokor",2],["SUSE",1],["Asar",0],["Truculenta",1],["Anek Tamil",1],["Duru Sans",1],["Gupter",0],["M PLUS 1 Code",4],["Reddit Mono",4],["Arya",1],["Kulim Park",1],["Bubbler One",1],["Shojumaru",2],["Brawler",0],["Cactus Classical Serif",0],["Luxurious Script",3],["Walter Turncoat",3],["Sumana",0],["Ysabeau SC",1],["Gulzar",0],["Licorice",3],["Prociono",0],["Bellota",2],["Pliant",1],["Protest Riot",2],["Mirza",0],["Eagle Lake",3],["Doppio One",1],["Moul",2],["Fontdiner Swanky",2],["Crafty Girls",3],["Julee",3],["Cherry Cream Soda",2],["Exile",2],["Birthstone Bounce",3],["Puritan",1],["Emilys Candy",2],["Fuggles",3],["Viaoda Libre",2],["Redressed",3],["Kranky",2],["Nosifer",2],["Slabo 13px",0],["Molengo",1],["Baloo Paaji 2",2],["Chicle",2],["Lavishly Yours",3],["Lemon",2],["Waterfall",3],["NTR",1],["Clicker Script",3],["Baloo Bhaina 2",2],["Kavoon",2],["Koh Santepheap",0],["Amethysta",0],["Nata Sans",1],["Iceland",2],["Unkempt",2],["Ballet",3],["Fenix",0],["Montaga",0],["Baskervville SC",0],["Raleway Dots",2],["Habibi",0],["The Girl Next Door",3],["Long Cang",3],["Wire One",1],["Varta",1],["Goblin One",2],["Ranchers",2],["Wendy One",1],["Faculty Glyphic",1],["BIZ UDMincho",0],["Peralta",0],["Dangrek",2],["Stalemate",3],["Bodoni Moda SC",0],["Homenaje",1],["Imbue",0],["Cherry Swash",2],["Bonheur Royale",3],["Sevillana",2],["Poor Story",2],["Esteban",0],["East Sea Dokdo",3],["Dokdo",2],["Henny Penny",2],["Baloo Tammudu 2",2],["Edu TAS Beginner",3],["Alkalami",0],["Mooli",1],["Agdasima",1],["Marhey",2],["Miniver",2],["Chau Philomene One",1],["BhuTuka Expanded One",0],["Holtwood One SC",0],["Lovers Quarrel",3],["Bigshot One",2],["Sail",2],["Gafata",1],["Baumans",2],["Honk",2],["Konkhmer Sleokchher",2],["Comme",1],["Genos",1],["Denk One",1],["Orienta",1],["Kavivanar",3],["Story Script",1],["Mako",1],["Shanti",1],["Geom",1],["Mystery Quest",2],["Zhi Mang Xing",3],["Gemunu Libre",1],["Handjet",2],["Jolly Lodger",2],["Artifika",0],["Kapakana",3],["Ancizar Serif",0],["Climate Crisis",2],["Edu SA Beginner",3],["Sono",1],["Jomolhari",0],["Smooch",3],["Momo Trust Sans",1],["Chocolate Classical Sans",1],["IM Fell Double Pica",0],["Overlock SC",2],["Freckle Face",2],["Gugi",2],["Asimovian",1],["Liter",1],["Ceviche One",2],["Mynerve",3],["Sunshiney",3],["Cairo Play",1],["Anek Gujarati",1],["Convergence",1],["Headland One",0],["Devonshire",3],["Akaya Kanadaka",2],["Libertinus Sans",1],["Joan",0],["Hubot Sans",1],["Stoke",0],["Tiro Devanagari Sanskrit",0],["Modern Antiqua",2],["Qahiri",1],["Macondo Swash Caps",2],["Mea Culpa",3],["Anek Kannada",1],["Jaro",1],["Carme",1],["Federant",2],["Stylish",1],["Delius Unicase",3],["Voces",1],["Edu NSW ACT Cursive",3],["Delius Swash Caps",3],["Dorsa",1],["Trispace",1],["Port Lligat Sans",1],["Manuale",0],["Zilla Slab Highlight",0],["Strait",1],["Timmana",1],["Yuji Boku",0],["Victor Mono",4],["Notable",1],["Englebert",1],["IBM Plex Sans Devanagari",1],["Rationale",1],["IM Fell French Canon",0],["Maiden Orange",0],["Swanky and Moo Moo",3],["Akt",1],["Sansation",1],["Beau Rivage",3],["Comforter",3],["Sura",0],["Agrave Pro",3],["Bilbo",3],["Harmattan",1],["Cascadia Code",1],["Nova Round",2],["Loved by the King",3],["Rum Raisin",1],["Playpen Sans Arabic",3],["Winky Sans",1],["Ruthie",3],["Rubik Wet Paint",2],["Montserrat Underline",1],["Akronim",2],["Londrina Outline",2],["Belgrano",0],["Firjar",1],["Akaya Telivigala",2],["Pavanam",1],["Liu Jian Mao Cao",3],["Yeon Sung",2],["Iansui",3],["The Nautigal",3],["Mate SC",0],["Bungee Spice",2],["Tauri",1],["Nabla",2],["Moderustic",1],["Erica One",2],["Ysabeau",1],["Galindo",2],["Redacted",2],["IM Fell Great Primer",0],["Lexend Mega",1],["Odibee Sans",2],["Engagement",3],["Monofett",4],["Crushed",2],["Solitreo",3],["Offside",2],["Carrois Gothic SC",1],["Zen Tokyo Zoo",2],["Barrio",2],["Manufacturing Consent",2],["Katibeh",2],["Gwendolyn",3],["Margarine",2],["Rubik Moonrocks",2],["BBH Hegarty",1],["Girassol",2],["Flamenco",2],["Braah One",1],["Passions Conflict",3],["Sree Krushnadevaraya",0],["Kanchenjunga",1],["SN Pro",1],["Stint Ultra Condensed",0],["Chilanka",3],["IM Fell DW Pica SC",0],["Fascinate Inline",2],["Cantora One",1],["Wittgenstein",0],["Nerko One",3],["Lugrasimo",3],["Asset",2],["Suwannaphum",0],["Risque",2],["Fascinate",2],["Gentium Plus",0],["Inika",0],["Nova Flat",2],["Port Lligat Slab",0],["Redaction 100",2],["Smokum",2],["Sirin Stencil",2],["Cute Font",2],["Edu AU VIC WA NT Hand",3],["Tourney",2],["Stint Ultra Expanded",0],["Cagliostro",1],["Srisakdi",2],["Festive",3],["Monomakh",2],["Kaisei HarunoUmi",0],["Island Moments",3],["Jersey 15",2],["Castoro Titling",2],["Yaldevi",1],["Badeen Display",2],["Water Brush",3],["Autour One",2],["Griffy",2],["Ramaraja",0],["Rubik Scribble",2],["Simonetta",2],["SUSE Mono",1],["Inspiration",3],["Jacques Francois Shadow",2],["Paprika",2],["Nova Slim",2],["Stack Sans Notch",1],["Beiruti",1],["Tillana",2],["Tac One",1],["Junge",0],["Lexend Tera",1],["Shalimar",3],["Bruno Ace SC",2],["Glass Antiqua",2],["Send Flowers",3],["Jacques Francois",0],["Mogra",2],["Big Shoulders Stencil",2],["Luxurious Roman",2],["Dekko",3],["Chela One",2],["Nova Oval",2],["Sonsie One",2],["Ysabeau Infant",1],["Tiny5 Duo",2],["BBH Bartle",1],["Text Me One",1],["Jacquard 12",2],["Miltonian",2],["Gorditas",2],["Linden Hill",0],["Geist Pixel",2],["Geostar Fill",2],["Libre Barcode EAN13 Text",2],["Chathura",1],["Spirax",2],["Butcherman",2],["Meera Inimai",1],["Almendra Display",2],["Joti One",2],["Encode Sans SC",1],["Anek Odia",1],["IM Fell Double Pica SC",0],["Averia Gruesa Libre",2],["Bruno Ace",2],["Kite One",1],["Donegal One",0],["Milonga",2],["Almendra SC",0],["Bitcount Grid Double",2],["Trykker",0],["Sigmar",2],["Chiron Hei HK",1],["IM Fell French Canon SC",0],["Kotta One",0],["Aref Ruqaa Ink",0],["Princess Sofia",3],["Texturina",0],["Arbutus",0],["Tiro Devanagari Marathi",0],["Farsan",2],["Jim Nightshade",3],["Odor Mean Chey",0],["Comforter Brush",3],["Romanesco",3],["Tiro Gurmukhi",0],["Smythe",2],["Redaction 20",0],["Fleur De Leah",3],["Praise",3],["Kenia",2],["Intel One Mono",4],["Arsenal SC",1],["Bungee Outline",2],["Marko One",0],["Chiron Sung HK",0],["Seymour One",1],["Underdog",2],["Elsie Swash Caps",2],["Idiqlat",0],["IM Fell Great Primer SC",0],["LXGW WenKai Mono TC",4],["WDXL Lubrifont JP N",1],["Hubballi",1],["Ruluko",1],["New Amsterdam",1],["New Tegomin",0],["Dhurjati",1],["Epunda Sans",1],["Miranda Sans",1],["Lakki Reddy",3],["Fruktur",2],["Gideon Roman",2],["Caramel",3],["Bitcount Prop Single",2],["Reem Kufi Fun",1],["Libre Barcode 39 Extended",2],["Alumni Sans Pinstripe",1],["Ravi Prakash",2],["Redaction 50",2],["Londrina Shadow",2],["Astloch",2],["Syne Tactile",2],["Diplomata",2],["Sixtyfour",4],["Neonderthaw",3],["Purple Purse",2],["Miltonian Tattoo",2],["Tilt Prism",2],["Ojuju",1],["Ewert",2],["Redaction 35",2],["Condiment",3],["Orbit",1],["Ancizar Sans",1],["Benne",0],["Emblema One",2],["Nuosu SIL",1],["Yarndings 20 Charted",2],["Oi",2],["Nova Cut",2],["Kedebideri",1],["Sedan SC",0],["Galdeano",1],["Jersey 20",2],["Metal",2],["Sofadi One",2],["Ubuntu Sans Mono",4],["Gveret Levin",3],["Dai Banna SIL",0],["Piedra",2],["Tsukimi Rounded",1],["Buda",2],["Preahvihear",1],["Rubik Storm",2],["Bacasime Antique",0],["Diphylleia",0],["Babylonica",3],["Anek Gurmukhi",1],["Bahiana",2],["Felipa",3],["Vampiro One",2],["Nova Script",2],["Keania One",2],["Londrina Sketch",2],["Passero One",2],["Reem Kufi Ink",1],["Rhodium Libre",0],["Plaster",2],["Tiro Telugu",0],["Updock",3],["Rubik Distressed",2],["Sahitya",0],["Uchen",0],["Bigelow Rules",2],["Amarna",1],["Edu NSW ACT Foundation",3],["Snippet",1],["Bungee Hairline",2],["Ribeye Marrow",2],["Miss Fajardose",3],["GFS Neohellenic",1],["Tulpen One",2],["Diplomata SC",2],["Tuffy",1],["Dr Sugiyama",3],["Grey Qo",3],["My Soul",3],["Mr Bedfort",3],["Wellfleet",0],["Ole",3],["Bitcount Grid Single",2],["Gidugu",1],["Iosevka Charon Mono",4],["Twinkle Star",3],["Kumar One",2],["Sixtyfour Convergence",4],["WDXL Lubrifont SC",1],["Alumni Sans Collegiate One",1],["Micro 5",2],["Cascadia Mono",1],["Love Light",3],["Foldit",2],["Black And White Picture",2],["Stalinist One",2],["TASA Explorer",1],["Ranga",2],["BioRhyme Expanded",0],["Estedad",1],["Bonbon",3],["Alumni Sans Inline One",2],["Mrs Sheppards",3],["Edu VIC WA NT Beginner",3],["Jacquard 24",2],["Lancelot",2],["Oldenburg",2],["Kirang Haerang",2],["Noto Serif Dives Akuru",0],["Grechen Fuemen",3],["Cossette Texte",1],["Alyamama",0],["Rubik Burned",2],["Rubik Iso",2],["Tiro Kannada",0],["Sedan",0],["Shizuru",2],["Gidole",1],["Molle",3],["Redaction",0],["Langar",2],["Lunasima",1],["M PLUS U",1],["Bungee Tint",2],["Peddana",0],["Kolker Brush",3],["Revalia",2],["Playpen Sans Hebrew",3],["Flavors",2],["Estonia",3],["Kings",3],["Iosevka Charon",4],["Vibes",2],["Hanalei Fill",2],["Rubik Microbe",2],["UoqMunThenKhung",0],["Trochut",2],["Zen Loop",2],["Valley Sans",1],["Cossette Titre",1],["Cherish",3],["Blaka",2],["Alumni Sans SC",1],["Matemasie",1],["Xmind",1],["Butterfly Kids",3],["Jacquarda Bastarda 9",2],["Rubik Vinyl",2],["Redacted Script",2],["Tai Heritage Pro",0],["Asap Sharp",1],["Explora",3],["Isometra",0],["Rubik Gemstones",2],["Triodion",2],["Menbere",1],["Protest Guerrilla",2],["Snowburst One",2],["Flow Block",2],["LXGW Marker Gothic",1],["Aubrey",2],["Tiro Tamil",0],["Tapestry",3],["WDXL Lubrifont TC",1],["Slackside One",3],["Edu AU VIC WA NT Guides",3],["Moulpali",1],["Winky Rough",1],["Splash",3],["Workbench",4],["Rubik Glitch Pop",2],["Libre Caslon Condensed",0],["Clarity City",1],["Redaction 70",2],["Bitcount",2],["Rubik Marker Hatch",2],["Petemoss",3],["Cause",3],["Edu AU VIC WA NT Dots",3],["Rubik 80s Fade",2],["Ponomar",2],["Rubik Beastly",2],["Are You Serious",3],["Lilex",4],["Sassy Frass",3],["Suravaram",0],["Annapurna SIL",0],["Libertinus Mono",4],["Moo Lah Lah",2],["Combo",2],["Namdhinggo",0],["Edu SA Hand",3],["Sankofa Display",1],["Taprom",2],["Scoutie Sans",1],["Libertinus Serif Display",2],["Gajraj One",2],["Epunda Slab",0],["Lumanosimo",3],["Rubik Puddles",2],["Redaction 10",0],["Ga Maamli",2],["Labrada",0],["Parastoo",0],["Geostar",2],["Kay Pho Du",0],["Agu Display",2],["Bpmf Huninn",1],["Tagesschrift",2],["Danfo",0],["Grandiflora One",0],["Kalnia Glaze",2],["Coral Pixels",2],["M PLUS Code Latin",1],["Rock 3D",2],["Kumar One Outline",2],["Bahianita",2],["Datatype",4],["Rubik Pixels",2],["Hind Mysuru",1],["Ruge Boogie",3],["Sirivennela",1],["Playpen Sans Thai",3],["Rubik Broken Fax",2],["Palette Mosaic",2],["Lisu Bosa",0],["Ingrid Darling",3],["Bpmf Zihi Kai Std",1],["Big Shoulders Inline",2],["Moirai One",2],["Narnoor",1],["Edu AU VIC WA NT Pre",3],["Maname",0],["Flow Rounded",2],["Rubik Maps",2],["Edu QLD Beginner",3],["Savate",1],["Alien Block",2],["Puppies Play",3],["Jaini Purva",2],["Finlandica Headline",1],["Chokokutai",2],["Bytesized",1],["Yarndings 12",2],["Strichpunkt Sans",1],["Hibur Mono",4],["Playpen Sans Deva",3],["Bpmf Iansui",3],["Geomini",1],["Ponnala",2],["Pochaevsk",2],["Edu NSW ACT Hand Pre",3],["Shafarik",2],["Hanalei",2],["Rubik Doodle Triangles",2],["Saira Stencil",2],["Rubik Maze",2],["Rubik Lines",2],["BJCree",0],["Mingzat",1],["Yuji Hentaigana Akari",3],["Bitcount Grid Single Ink",2],["Bitcount Single Ink",2],["Tirra",1],["Montenegrin Gothic One",0],["Jaini",2],["Blaka Ink",2],["Bitcount Prop Double",2],["Blaka Hollow",2],["Warnes",2],["Edu AU VIC WA NT Arrows",3],["Edu QLD Hand",3],["Yuyu",3],["Libertinus Keyboard",2],["Yuyu Short",3],["Micro 5 Charted",2],["Bitcount Grid Double Ink",2],["Matangi",1],["Bitcount Prop Double Ink",2],["Betania Patmos",3],["Bitcount Ink",2],["Edu VIC WA NT Hand",3],["Padyakke Expanded One",0],["Jacquard 12 Charted",2],["Bitcount Prop Single Ink",2],["Jacquard 24 Charted",2],["Caacupe One",2],["Betania Patmos In",3],["Edu VIC WA NT Hand Pre",3],["Yuji Hentaigana Akebono",3],["Jersey 15 Charted",2],["Jersey 20 Charted",2],["Jersey 25 Charted",2],["Kripa",1],["Jersey 10 Charted",2],["Jacquarda Bastarda 9 Charted",2],["Betania Patmos In GDL",3],["Betania Patmos GDL",3],["Yarndings 20",2],["Yarndings 12 Charted",2],["Ramsina",0]];
+
+      /* Font dimuat on-demand: preview memakai subset huruf kecil, font penuh
+         baru diunduh saat benar-benar dipilih — editor tetap ringan di HP. */
+      const loadedFullFonts = new Set(CURATED_FONTS);
+      const injectedFontLinks = new Set();
+      function injectFontLink(href, key) {
+        if (injectedFontLinks.has(key)) return;
+        injectedFontLinks.add(key);
+        const l = document.createElement("link");
+        l.rel = "stylesheet"; l.href = href;
+        document.head.appendChild(l);
+      }
+      const encFam = (name) => encodeURIComponent(name).replace(/%20/g, "+");
+      function loadFontFull(name) {
+        name = famName(name);
+        if (loadedFullFonts.has(name)) return Promise.resolve();
+        loadedFullFonts.add(name);
+        injectFontLink("https://fonts.googleapis.com/css2?family=" + encFam(name) + "&display=swap", "f:" + name);
+        return document.fonts.load('16px "' + name + '"').catch(() => {});
+      }
+      const PREVIEW_TEXT = "Anya & Dimas 0123456789";
+      function loadFontPreview(name) {
+        injectFontLink("https://fonts.googleapis.com/css2?family=" + encFam(name) + "&text=" + encodeURIComponent(PREVIEW_TEXT) + "&display=swap", "p:" + name);
+      }
+
+      const INK_SWATCHES = ["#2b2620", "#5b4636", "#8a6d2f", "#a97e2f", "#c9a227", "#5f7263", "#33523f", "#b4566f", "#8e3b4f", "#2e3a55", "#7a746c", "#ffffff"];
+
+      /* ---------- Background specs (dipakai DOM + ekspor canvas) ---------- */
+      const solid = (c) => ({ kind: "solid", c });
+      const lin = (dir, a, b) => ({ kind: "linear", dir, stops: [[0, a], [1, b]] });
+      const rad = (a, b) => ({ kind: "radial", stops: [[0, a], [1, b]] });
+      function cssBg(s) {
+        if (s.kind === "solid") return s.c;
+        if (s.kind === "linear") return `linear-gradient(${s.dir === "d" ? "135deg" : "180deg"}, ${s.stops[0][1]}, ${s.stops[1][1]})`;
+        return `radial-gradient(circle at 50% 30%, ${s.stops[0][1]}, ${s.stops[1][1]})`;
+      }
+
+      /* ---------- SVG dekorasi per template ---------- */
+      function leaf(x, y, r, s, fill, op) {
+        return `<g transform="translate(${x} ${y}) rotate(${r}) scale(${s})"><path d="M0 0 Q 17 -15 36 -13 Q 22 5 0 0 Z" fill="${fill}" opacity="${op}"/></g>`;
+      }
+      function rose(cx, cy, s, o, m, i, c) {
+        return `<g transform="translate(${cx} ${cy}) scale(${s})">
+          <path d="M0-27 C14-23 21-9 16 3 C30-3 31 15 19 23 C24 35 5 41 -4 30 C-17 39 -29 26 -23 13 C-35 9 -33-9 -20-13 C-24-25 -10-31 0-27 Z" fill="${o}"/>
+          <path d="M0-15 C8-11 11-3 7 3 C13 5 11 14 3 15 C3 22 -8 22 -10 14 C-17 12 -16 2 -10-1 C-12-9 -6-15 0-15 Z" fill="${m}"/>
+          <path d="M0-7 C4-5 5 0 2 3 C5 6 -1 8 -3 4 C-6 3 -5-3 0-7 Z" fill="${i}"/>
+          <circle r="2.2" fill="${c}"/></g>`;
+      }
+      function decorEmas() {
+        const G = "#b9902f", GL = "#d9b45c";
+        let leaves = "";
+        const pts = [[38,232,-38,.95],[66,178,-30,.85],[98,128,-18,.8],[140,92,-6,.75],[188,66,4,.7],[238,50,10,.62]];
+        pts.forEach((p) => { leaves += leaf(p[0], p[1], p[2], p[3], G, .8); });
+        const corner = `<g id="gc">
+            <path d="M16 288 C16 152 62 64 152 32 C206 13 258 17 288 14" fill="none" stroke="${G}" stroke-width="3.2"/>
+            <path d="M34 288 C34 170 76 84 160 50" fill="none" stroke="${GL}" stroke-width="1.4" opacity=".8"/>
+            ${leaves}
+            <circle cx="112" cy="96" r="4.5" fill="${G}"/><circle cx="92" cy="118" r="3.4" fill="${GL}"/><circle cx="128" cy="74" r="3.2" fill="${G}"/>
+            ${rose(58, 58, 1.05, GL, G, "#8a6d2f", "#fbf6ec")}
+          </g>`;
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1414">
+          <rect x="27" y="27" width="946" height="1360" fill="none" stroke="${G}" stroke-width="3"/>
+          <rect x="43" y="43" width="914" height="1328" fill="none" stroke="${G}" stroke-width="1.1" opacity=".75"/>
+          ${corner}
+          <use href="#gc" transform="translate(1000 0) scale(-1 1)"/>
+          <use href="#gc" transform="translate(0 1414) scale(1 -1)"/>
+          <use href="#gc" transform="translate(1000 1414) scale(-1 -1)"/>
+        </svg>`;
+      }
+      function decorSage() {
+        const S = "#7d9478", S1 = "#93a98e", S2 = "#aebfa4", BD = "#b3c2ab";
+        function branch(id, flip) {
+          const lv = [[52,238,-52],[70,192,-118],[64,178,-38],[86,140,-112],[88,128,-28],[112,94,-100],[122,84,-16],[150,54,-84]]
+            .map((p, ix) => `<ellipse cx="${p[0]}" cy="${p[1]}" rx="29" ry="14.5" transform="rotate(${p[2]} ${p[0]} ${p[1]})" fill="${ix % 2 ? S1 : S2}" opacity=".92"/>`).join("");
+          return `<g id="${id}">
+            <path d="M34 306 C52 200 92 96 186 22" fill="none" stroke="${S}" stroke-width="3.4"/>
+            <path d="M52 258 C96 236 128 240 158 262" fill="none" stroke="${S}" stroke-width="2.2"/>
+            <ellipse cx="128" cy="252" rx="21" ry="10.5" transform="rotate(24 128 252)" fill="${S2}"/>
+            <ellipse cx="162" cy="266" rx="18" ry="9" transform="rotate(38 162 266)" fill="${S1}"/>
+            ${lv}</g>`;
+        }
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1414">
+          <rect x="30" y="30" width="940" height="1354" fill="none" stroke="${BD}" stroke-width="2"/>
+          ${branch("sb")}
+          <use href="#sb" transform="translate(1000 1414) scale(-1 -1)"/>
+          <circle cx="500" cy="52" r="3.4" fill="${S1}"/><circle cx="500" cy="1362" r="3.4" fill="${S1}"/>
+        </svg>`;
+      }
+      function decorBlush() {
+        const O = "#eec3cd", M = "#df93a9", I = "#c96a86", C = "#a84a63", L = "#a7b795", L2 = "#8ba07c", BD = "#cf9783";
+        const cluster = `<g id="bc">
+            ${leaf(70, 150, 155, 1.5, L, .95)}${leaf(120, 96, 120, 1.35, L2, .9)}${leaf(160, 140, 175, 1.2, L, .9)}
+            ${leaf(46, 96, 105, 1.15, L2, .9)}${leaf(196, 66, 140, 1, L, .85)}
+            ${rose(96, 84, 1.55, O, M, I, C)}
+            ${rose(178, 128, 1.05, O, M, I, C)}
+            ${rose(56, 168, .8, O, M, I, C)}
+            <circle cx="216" cy="90" r="10" fill="${M}"/><circle cx="216" cy="90" r="4.5" fill="${I}"/>
+            <circle cx="30" cy="222" r="3.6" fill="${M}"/><circle cx="52" cy="238" r="2.8" fill="${I}"/>
+          </g>`;
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1414">
+          <rect x="28" y="28" width="944" height="1358" fill="none" stroke="${BD}" stroke-width="2.2"/>
+          <rect x="40" y="40" width="920" height="1334" fill="none" stroke="${BD}" stroke-width=".9" opacity=".55"/>
+          ${cluster}
+          <use href="#bc" transform="translate(1000 1414) scale(-1 -1)"/>
+        </svg>`;
+      }
+      function decorSVG(tplId) {
+        return tplId === "sage" ? decorSage() : tplId === "blush" ? decorBlush() : decorEmas();
+      }
+      function dividerSVG(color) {
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 24">
+          <line x1="4" y1="12" x2="118" y2="12" stroke="${color}" stroke-width="1.8"/>
+          <line x1="182" y1="12" x2="296" y2="12" stroke="${color}" stroke-width="1.8"/>
+          <circle cx="128" cy="12" r="2.6" fill="${color}"/><circle cx="172" cy="12" r="2.6" fill="${color}"/>
+          <rect x="141" y="3" width="18" height="18" transform="rotate(45 150 12)" fill="none" stroke="${color}" stroke-width="1.8"/>
+          <circle cx="150" cy="12" r="2.4" fill="${color}"/></svg>`;
+      }
+
+      /* ---------- Pabrik elemen ---------- */
+      let _uid = 0;
+      const uid = () => "e" + ++_uid;
+      function txt(text, o) {
+        return Object.assign({
+          id: uid(), type: "text", text, x: 100, y: 100, w: 800,
+          font: "cormorant", size: 26, color: "#2b2620", align: "center",
+          bold: false, italic: false, ls: 0, lh: 1.3,
+        }, o || {});
+      }
+      function imgEl(o) {
+        return Object.assign({
+          id: uid(), type: "image", src: PHOTO_DEFAULT, nw: 1120, nh: 2240,
+          x: 320, y: 200, w: 360, h: 460, shape: "arch", zoom: 1, px: 0, py: 0,
+        }, o || {});
+      }
+      function divEl(o) {
+        return Object.assign({ id: uid(), type: "divider", x: 350, y: 300, w: 300, h: 24, color: "#a97e2f" }, o || {});
+      }
+
+      /* ---------- Template ---------- */
+      const TEMPLATES = {
+        emas: {
+          name: "Klasik Emas",
+          thumbBg: "linear-gradient(180deg,#fdfaf2,#f3ead9)", thumbInk: "#b9902f",
+          bgs: [solid("#fbf6ec"), solid("#f6eedd"), solid("#fdfbf6"), solid("#f1e7d2")],
+          make() {
+            const INK = "#3a2f22", GOLD = "#8a6d2f";
+            return [
+              txt("UNDANGAN PERNIKAHAN", { x: 120, y: 92, w: 760, font: "montserrat", size: 25, ls: 6, color: GOLD }),
+              divEl({ x: 350, y: 140, color: "#a97e2f" }),
+              txt("Assalamu’alaikum Warahmatullahi Wabarakatuh", { x: 110, y: 182, w: 780, font: "cormorant", size: 27, italic: true, color: INK }),
+              imgEl({ x: 325, y: 232, w: 350, h: 430, shape: "arch" }),
+              txt("Anya & Dimas", { x: 60, y: 690, w: 880, font: "vibes", size: 100, color: GOLD, lh: 1.1 }),
+              txt("Anya Larasati, S.E.", { x: 150, y: 822, w: 700, font: "playfair", size: 34, color: INK }),
+              txt("Putri dari Bapak H. Laras Wibowo & Ibu Hj. Sari Wibowo", { x: 150, y: 872, w: 700, size: 22, color: "#6b5a44" }),
+              txt("&", { x: 400, y: 916, w: 200, font: "vibes", size: 46, color: GOLD }),
+              txt("Dimas Prasetyo, S.T.", { x: 150, y: 982, w: 700, font: "playfair", size: 34, color: INK }),
+              txt("Putra dari Bapak H. Prasetyo Nugroho & Ibu Hj. Ratna Nugroho", { x: 150, y: 1032, w: 700, size: 22, color: "#6b5a44" }),
+              divEl({ x: 350, y: 1088, color: "#a97e2f" }),
+              txt("Sabtu, 12 Desember 2026", { x: 150, y: 1124, w: 700, font: "playfair", size: 37, bold: true, color: INK }),
+              txt("Pukul 10.00 WIB — selesai\nGedung Serbaguna Melati, Jl. Kenanga No. 8, Jakarta", { x: 150, y: 1184, w: 700, size: 23, color: "#54452f", lh: 1.45 }),
+              txt("Merupakan suatu kehormatan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir dan memberikan doa restu.", { x: 110, y: 1296, w: 780, size: 20, italic: true, color: "#6b5a44" }),
+            ];
+          },
+        },
+        sage: {
+          name: "Sage Botani",
+          thumbBg: "linear-gradient(180deg,#fdfefb,#e9efe1)", thumbInk: "#7d9478",
+          bgs: [lin("v", "#fdfefb", "#edf1e6"), solid("#fbfdf8"), solid("#f2f0e6"), lin("d", "#fdfefb", "#e3ebdb")],
+          make() {
+            const INK = "#31402f", SAGE = "#5f7263", MUT = "#66755f";
+            return [
+              txt("THE WEDDING OF", { x: 200, y: 100, w: 600, font: "montserrat", size: 23, ls: 8, color: SAGE }),
+              txt("Anya Larasati", { x: 60, y: 148, w: 880, font: "playfair", size: 62, color: INK }),
+              txt("&", { x: 400, y: 238, w: 200, font: "vibes", size: 56, color: SAGE }),
+              txt("Dimas Prasetyo", { x: 60, y: 306, w: 880, font: "playfair", size: 62, color: INK }),
+              imgEl({ x: 305, y: 408, w: 390, h: 470, shape: "rounded" }),
+              divEl({ x: 350, y: 922, color: "#7d9478" }),
+              txt("Sabtu, 12 Desember 2026", { x: 150, y: 962, w: 700, font: "playfair", size: 36, bold: true, color: INK }),
+              txt("Akad Nikah pukul 08.00 WIB · Resepsi pukul 10.00 WIB", { x: 110, y: 1022, w: 780, size: 23, color: MUT }),
+              txt("The Sage Garden Hall\nJl. Flamboyan Raya No. 21, Bandung", { x: 150, y: 1072, w: 700, size: 23, color: INK, lh: 1.45 }),
+              txt("Putri dari Bapak H. Laras Wibowo & Ibu Hj. Sari Wibowo\nPutra dari Bapak H. Prasetyo Nugroho & Ibu Hj. Ratna Nugroho", { x: 110, y: 1178, w: 780, size: 20, color: MUT, lh: 1.5 }),
+              txt("Dengan memohon rahmat dan ridha Allah SWT, kami mengundang Bapak/Ibu/Saudara/i untuk hadir di hari bahagia kami.", { x: 110, y: 1284, w: 780, size: 20, italic: true, color: MUT }),
+            ];
+          },
+        },
+        blush: {
+          name: "Blush Mawar",
+          thumbBg: "radial-gradient(circle at 50% 30%,#fff6f3,#f6dcd8)", thumbInk: "#c96a86",
+          bgs: [rad("#fff6f3", "#f6dcd8"), solid("#fdf1ec"), lin("d", "#fff8f5", "#f3d5d2"), solid("#fbeae6")],
+          make() {
+            const INK = "#59303c", ROSE = "#a8485f", MUT = "#7d5560";
+            return [
+              imgEl({ x: 350, y: 96, w: 300, h: 300, shape: "circle" }),
+              txt("Undangan Pernikahan", { x: 150, y: 428, w: 700, font: "pinyon", size: 44, color: ROSE }),
+              txt("Anya & Dimas", { x: 60, y: 492, w: 880, font: "vibes", size: 98, color: ROSE, lh: 1.1 }),
+              divEl({ x: 350, y: 622, color: "#c96a86" }),
+              txt("Anya Larasati, S.E. & Dimas Prasetyo, S.T.\nPutri dari Bapak H. Laras Wibowo & Ibu Hj. Sari Wibowo\nPutra dari Bapak H. Prasetyo Nugroho & Ibu Hj. Ratna Nugroho", { x: 110, y: 662, w: 780, size: 23, color: MUT, lh: 1.55 }),
+              txt("SABTU", { x: 300, y: 838, w: 400, font: "montserrat", size: 22, ls: 7, color: ROSE }),
+              txt("12 . 12 . 2026", { x: 150, y: 876, w: 700, font: "playfair", size: 52, bold: true, color: INK }),
+              txt("Pukul 10.00 WIB — selesai\nRose Garden Ballroom, Jl. Kenanga No. 8, Jakarta", { x: 150, y: 962, w: 700, size: 23, color: INK, lh: 1.45 }),
+              divEl({ x: 350, y: 1076, color: "#c96a86" }),
+              txt("Merupakan suatu kehormatan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir dan memberikan doa restu kepada kedua mempelai.", { x: 110, y: 1116, w: 780, size: 21, italic: true, color: MUT, lh: 1.5 }),
+              txt("Wassalamu’alaikum Warahmatullahi Wabarakatuh", { x: 110, y: 1252, w: 780, font: "cormorant", size: 24, italic: true, color: ROSE }),
+            ];
+          },
+        },
+      };
+
+      /* ---------- State ---------- */
+      const state = {
+        template: "emas",
+        bg: TEMPLATES.emas.bgs[0],
+        elements: [],
+        selectedId: null,
+        tab: "template",
+        zoom: 1,
+      };
+      let scale = 0.35;
+      let history = [], hIdx = -1;
+      const snapshot = () => JSON.stringify({ t: state.template, bg: state.bg, els: state.elements });
+      function commit() {
+        history = history.slice(0, hIdx + 1);
+        history.push(snapshot());
+        if (history.length > 60) history.shift();
+        hIdx = history.length - 1;
+        syncUndo();
+      }
+      function restore(json) {
+        const s = JSON.parse(json);
+        state.template = s.t; state.bg = s.bg; state.elements = s.els;
+        if (!state.elements.some((e) => e.id === state.selectedId)) state.selectedId = null;
+        renderAll();
+      }
+      function undo() { if (hIdx > 0) { hIdx--; restore(history[hIdx]); syncUndo(); } }
+      function redo() { if (hIdx < history.length - 1) { hIdx++; restore(history[hIdx]); syncUndo(); } }
+      function syncUndo() {
+        document.getElementById("undoBtn").disabled = hIdx <= 0;
+        document.getElementById("redoBtn").disabled = hIdx >= history.length - 1;
+      }
+      const sel = () => state.elements.find((e) => e.id === state.selectedId) || null;
+
+      /* ---------- DOM refs ---------- */
+      const $ = (id) => document.getElementById(id);
+      const board = $("board"), decorEl = $("decor"), layerHost = $("layerHost"),
+        selbox = $("selbox"), stage = $("stage"), sizer = $("sizer"), tabbody = $("tabbody");
+
+      /* ---------- Layout / zoom ---------- */
+      function layout() {
+        const r = stage.getBoundingClientRect();
+        const reserveB = window.innerWidth <= 859 ? 56 : 0;
+        const fit = Math.min((r.width - 30) / W, (r.height - 30 - reserveB) / H);
+        scale = Math.max(0.05, fit * state.zoom);
+        sizer.style.width = W * scale + "px";
+        sizer.style.height = H * scale + "px";
+        board.style.transform = "scale(" + scale + ")";
+        board.style.setProperty("--inv", String(1 / scale));
+        $("zoomPct").textContent = Math.round(state.zoom * 100) + "%";
+        positionSelbox();
+      }
+
+      /* ---------- Render kanvas ---------- */
+      function shapeRadius(el) {
+        if (el.shape === "circle" || el.shape === "oval") return "50%";
+        if (el.shape === "arch") return "999px 999px 14px 14px";
+        if (el.shape === "straight") return "6px";
+        return "26px";
+      }
+      function imgGeom(el) {
+        const w = el.w, h = el.h, nw = el.nw || 1000, nh = el.nh || 1000;
+        const base = Math.max(w / nw, h / nh);
+        const dw = nw * base * el.zoom, dh = nh * base * el.zoom;
+        const dx = el.x + (w - dw) / 2 + (el.px / 100) * (dw - w) / 2;
+        const dy = el.y + (h - dh) / 2 + (el.py / 100) * (dh - h) / 2;
+        return { dw, dh, dx, dy };
+      }
+      function applyElStyle(node, el) {
+        node.style.left = el.x + "px";
+        node.style.top = el.y + "px";
+        if (el.type === "text") {
+          node.style.width = el.w + "px";
+          node.style.fontFamily = fam(el.font) + ", serif";
+          node.style.fontSize = el.size + "px";
+          node.style.color = el.color;
+          node.style.textAlign = el.align;
+          node.style.fontWeight = el.bold ? "700" : "400";
+          node.style.fontStyle = el.italic ? "italic" : "normal";
+          node.style.letterSpacing = el.ls + "px";
+          node.style.lineHeight = el.lh;
+        } else if (el.type === "image") {
+          node.style.width = el.w + "px";
+          node.style.height = el.h + "px";
+          node.style.borderRadius = shapeRadius(el);
+          const g = imgGeom(el), im = node.firstChild;
+          im.style.width = g.dw + "px"; im.style.height = g.dh + "px";
+          im.style.left = (g.dx - el.x) + "px"; im.style.top = (g.dy - el.y) + "px";
+        } else if (el.type === "divider") {
+          node.style.width = el.w + "px";
+          node.style.height = el.h + "px";
+          node.innerHTML = dividerSVG(el.color);
+        }
+      }
+      function makeNode(el) {
+        const n = document.createElement("div");
+        n.className = "el el-" + (el.type === "text" ? "text" : el.type === "image" ? "img" : "div");
+        n.dataset.id = el.id;
+        if (el.type === "text") n.textContent = el.text;
+        if (el.type === "image") {
+          const im = document.createElement("img");
+          im.src = el.src; im.alt = "Foto mempelai"; im.draggable = false;
+          n.appendChild(im);
+        }
+        applyElStyle(n, el);
+        return n;
+      }
+      function renderBoard() {
+        board.style.background = cssBg(state.bg);
+        decorEl.innerHTML = decorSVG(state.template);
+        layerHost.innerHTML = "";
+        state.elements.forEach((el) => layerHost.appendChild(makeNode(el)));
+        positionSelbox();
+      }
+      function refreshEl(el) {
+        const n = layerHost.querySelector(`[data-id="${el.id}"]`);
+        if (!n) { renderBoard(); return; }
+        if (el.type === "text") n.textContent = el.text;
+        if (el.type === "image") n.firstChild.src = el.src;
+        applyElStyle(n, el);
+        positionSelbox();
+      }
+      function elBounds(el) {
+        const n = layerHost.querySelector(`[data-id="${el.id}"]`);
+        const h = el.type === "text" ? (n ? n.offsetHeight : el.size * 2) : el.h;
+        return { x: el.x, y: el.y, w: el.w, h };
+      }
+      function positionSelbox() {
+        const el = sel();
+        if (!el) { selbox.style.display = "none"; $("selbar").classList.remove("show"); return; }
+        const b = elBounds(el);
+        selbox.style.display = "block";
+        selbox.style.left = b.x + "px"; selbox.style.top = b.y + "px";
+        selbox.style.width = b.w + "px"; selbox.style.height = b.h + "px";
+        $("selbar").classList.add("show");
+      }
+      function renderAll() {
+        $("tplName").textContent = TEMPLATES[state.template].name;
+        renderBoard();
+        renderPanel();
+        layout();
+      }
+      function select(id, openEdit) {
+        state.selectedId = id;
+        positionSelbox();
+        if (id && openEdit !== false) switchTab("edit");
+        else renderPanel();
+      }
+
+      /* ---------- Interaksi: geser & ubah ukuran ---------- */
+      let drag = null;
+      function boardPos(e) {
+        const r = board.getBoundingClientRect();
+        return { x: (e.clientX - r.left) / scale, y: (e.clientY - r.top) / scale };
+      }
+      board.addEventListener("pointerdown", (e) => {
+        if (document.body.classList.contains("preview")) return;
+        const handle = e.target.closest("#resizeHandle");
+        const node = e.target.closest(".el");
+        if (handle && sel()) {
+          const el = sel(), b = elBounds(el);
+          drag = { mode: "resize", el, sx: e.clientX, sy: e.clientY, ow: b.w, osize: el.size || 26 };
+          e.preventDefault();
+          return;
+        }
+        if (node) {
+          const el = state.elements.find((x) => x.id === node.dataset.id);
+          if (!el) return;
+          if (state.selectedId !== el.id) select(el.id);
+          drag = { mode: "move", el, sx: e.clientX, sy: e.clientY, ox: el.x, oy: el.y, moved: false };
+          e.preventDefault();
+        } else {
+          select(null, false);
+        }
+      });
+      window.addEventListener("pointermove", (e) => {
+        if (!drag) return;
+        const dx = (e.clientX - drag.sx) / scale, dy = (e.clientY - drag.sy) / scale;
+        const el = drag.el;
+        if (drag.mode === "move") {
+          if (Math.abs(e.clientX - drag.sx) + Math.abs(e.clientY - drag.sy) > 3) drag.moved = true;
+          el.x = Math.round(drag.ox + dx); el.y = Math.round(drag.oy + dy);
+        } else {
+          const nw = Math.max(50, drag.ow + dx);
+          if (el.type === "text") {
+            const ratio = nw / drag.ow;
+            el.w = Math.round(nw);
+            el.size = Math.round(Math.min(260, Math.max(9, drag.osize * ratio)));
+          } else if (el.type === "image") {
+            el.w = Math.round(nw);
+            el.h = Math.max(50, Math.round(el.h + dy));
+          } else {
+            el.w = Math.round(nw);
+          }
+        }
+        refreshEl(el);
+      });
+      window.addEventListener("pointerup", () => {
+        if (drag && (drag.moved || drag.mode === "resize")) commit();
+        drag = null;
+      });
+      board.addEventListener("dblclick", (e) => {
+        const node = e.target.closest(".el-text");
+        if (!node) return;
+        const el = state.elements.find((x) => x.id === node.dataset.id);
+        if (el) openTextEditor(el, node);
+      });
+
+      /* ---------- Editor teks melayang (ketuk dua kali) ---------- */
+      const textedit = $("textedit");
+      let editingEl = null;
+      function openTextEditor(el, node) {
+        editingEl = el;
+        const r = node.getBoundingClientRect();
+        textedit.value = el.text;
+        textedit.style.display = "block";
+        textedit.style.left = Math.max(4, r.left - 4) + "px";
+        textedit.style.top = Math.max(4, r.top - 4) + "px";
+        textedit.style.width = Math.max(180, r.width + 8) + "px";
+        textedit.style.height = Math.max(48, r.height + 8) + "px";
+        textedit.style.fontFamily = fam(el.font) + ", serif";
+        textedit.style.fontSize = Math.max(14, el.size * scale) + "px";
+        textedit.style.lineHeight = el.lh;
+        textedit.style.textAlign = el.align;
+        textedit.style.color = "#2b2620";
+        textedit.focus();
+        textedit.select();
+      }
+      function closeTextEditor(save) {
+        if (!editingEl) return;
+        if (save && textedit.value !== editingEl.text) {
+          editingEl.text = textedit.value;
+          refreshEl(editingEl);
+          commit();
+          if (state.tab === "edit") renderPanel();
+        }
+        editingEl = null;
+        textedit.style.display = "none";
+      }
+      textedit.addEventListener("blur", () => closeTextEditor(true));
+      textedit.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") { e.preventDefault(); closeTextEditor(false); }
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); closeTextEditor(true); }
+        e.stopPropagation();
+      });
+      textedit.addEventListener("pointerdown", (e) => e.stopPropagation());
+
+      /* ---------- Panel & tab ---------- */
+      function switchTab(tab) {
+        state.tab = tab;
+        document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
+        renderPanel();
+      }
+      document.querySelectorAll("#tabs button").forEach((b) =>
+        b.addEventListener("click", () => switchTab(b.dataset.tab)));
+
+      function swatchRow(colors, current, onPick, custom) {
+        const row = document.createElement("div");
+        row.className = "swrow";
+        colors.forEach((c) => {
+          const b = document.createElement("button");
+          b.className = "sw" + (current === c ? " on" : "");
+          b.style.background = c; b.title = c; b.setAttribute("aria-label", "Warna " + c);
+          b.addEventListener("click", () => onPick(c));
+          row.appendChild(b);
+        });
+        if (custom) {
+          const l = document.createElement("label");
+          l.className = "sw custom"; l.title = "Warna bebas";
+          l.innerHTML = '+<input type="color" value="' + (current || "#888888") + '">';
+          l.querySelector("input").addEventListener("input", (e) => onPick(e.target.value, false));
+          l.querySelector("input").addEventListener("change", () => { commit(); renderPanel(); });
+          row.appendChild(l);
+        }
+        return row;
+      }
+
+      function renderPanel() {
+        tabbody.innerHTML = "";
+        if (state.tab === "template") renderTemplateTab();
+        else if (state.tab === "tambah") renderAddTab();
+        else if (state.tab === "edit") renderEditTab();
+        else renderLayersTab();
+      }
+
+      function renderTemplateTab() {
+        const h = document.createElement("h3"); h.textContent = "Pilih template"; tabbody.appendChild(h);
+        const grid = document.createElement("div"); grid.className = "tplcards";
+        Object.entries(TEMPLATES).forEach(([id, t]) => {
+          const b = document.createElement("button");
+          b.className = "tplcard" + (state.template === id ? " on" : "");
+          b.innerHTML = `<span class="thumb" style="background:${t.thumbBg};color:${t.thumbInk}"></span><span class="nm">${t.name}</span>`;
+          b.addEventListener("click", () => {
+            if (state.template === id) return;
+            state.template = id;
+            state.bg = t.bgs[0];
+            state.elements = t.make();
+            state.selectedId = null;
+            commit(); renderAll();
+            toast("Template diganti: " + t.name + ". Pakai tombol urungkan kalau mau kembali.");
+          });
+          grid.appendChild(b);
+        });
+        tabbody.appendChild(grid);
+        const h2 = document.createElement("h3"); h2.textContent = "Warna latar"; tabbody.appendChild(h2);
+        tabbody.appendChild(swatchRow(
+          TEMPLATES[state.template].bgs.map((b) => b.c || b.stops[1][1]),
+          null,
+          (c, commitIt) => {
+            const found = TEMPLATES[state.template].bgs.find((b) => (b.c || b.stops[1][1]) === c);
+            if (found) { state.bg = found; renderBoard(); commit(); renderPanel(); }
+          }, false));
+        const p = document.createElement("p"); p.className = "hint";
+        p.textContent = "Mengganti template akan mengganti seluruh isi undangan. Semua elemen tetap bisa diedit bebas setelahnya.";
+        tabbody.appendChild(p);
+      }
+
+      function renderAddTab() {
+        const h = document.createElement("h3"); h.textContent = "Tambah elemen"; tabbody.appendChild(h);
+        const items = [
+          { t: "Teks baru", s: "Judul, nama, atau keterangan tambahan", ic: '<path d="M5 6V4h14v2"/><path d="M12 4v16"/><path d="M9 20h6"/>',
+            fn: () => { const el = txt("Teks baru", { x: 250, y: 660, w: 500, font: "playfair", size: 34, color: "#3a2f22" }); state.elements.push(el); commit(); renderBoard(); select(el.id); toast("Teks baru ditambahkan — ketuk dua kali untuk mengubah isinya."); } },
+          { t: "Foto baru", s: "Ambil dari galeri HP / komputer kamu", ic: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L6 21"/>',
+            fn: () => pickPhoto((src, nw, nh) => { const el = imgEl({ src, nw, nh, x: 310, y: 560, w: 380, h: 380, shape: "rounded" }); state.elements.push(el); commit(); renderBoard(); select(el.id); }) },
+          { t: "Garis ornamen", s: "Pemisah hias di antara bagian undangan", ic: '<path d="M3 12h6"/><path d="M15 12h6"/><rect x="9.5" y="9.5" width="5" height="5" transform="rotate(45 12 12)"/>',
+            fn: () => { const el = divEl({ x: 350, y: 700, color: "#a97e2f" }); state.elements.push(el); commit(); renderBoard(); select(el.id); } },
+        ];
+        items.forEach((it) => {
+          const b = document.createElement("button");
+          b.className = "addbtn";
+          b.innerHTML = `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${it.ic}</svg><span>${it.t}<small>${it.s}</small></span>`;
+          b.addEventListener("click", it.fn);
+          tabbody.appendChild(b);
+        });
+        const p = document.createElement("p"); p.className = "hint";
+        p.textContent = "Semua elemen bisa digeser dengan menyeretnya di kanvas, dan ukurannya diubah lewat pegangan biru di pojok kanan bawah elemen terpilih.";
+        tabbody.appendChild(p);
+      }
+
+      function rangeCtl(label, min, max, step, val, fmt, onInput, onCommit) {
+        const wrap = document.createElement("div"); wrap.className = "ctl";
+        const lab = document.createElement("label");
+        lab.innerHTML = `<span>${label}</span><output>${fmt(val)}</output>`;
+        const r = document.createElement("input");
+        r.type = "range"; r.min = min; r.max = max; r.step = step; r.value = val;
+        r.addEventListener("input", () => { lab.querySelector("output").textContent = fmt(parseFloat(r.value)); onInput(parseFloat(r.value)); });
+        r.addEventListener("change", () => { if (onCommit) onCommit(); else commit(); });
+        wrap.appendChild(lab); wrap.appendChild(r);
+        return wrap;
+      }
+
+      function renderEditTab() {
+        const el = sel();
+        if (!el) {
+          const p = document.createElement("p"); p.className = "hint";
+          p.innerHTML = "Belum ada elemen yang dipilih.<br><br>Ketuk teks atau foto di undangan untuk mulai mengedit. Ketuk dua kali pada teks untuk langsung mengubah isinya.";
+          tabbody.appendChild(p);
+          return;
+        }
+        if (el.type === "text") renderTextControls(el);
+        else if (el.type === "image") renderImageControls(el);
+        else renderDividerControls(el);
+        renderCommonControls(el);
+      }
+
+      function renderTextControls(el) {
+        const h = document.createElement("h3"); h.textContent = "Isi teks"; tabbody.appendChild(h);
+        const ta = document.createElement("textarea");
+        ta.className = "edit-text"; ta.value = el.text; ta.rows = 3;
+        ta.setAttribute("aria-label", "Isi teks");
+        ta.addEventListener("input", () => { el.text = ta.value; refreshEl(el); });
+        ta.addEventListener("change", () => commit());
+        tabbody.appendChild(ta);
+
+        const h2 = document.createElement("h3"); h2.textContent = "Jenis huruf"; tabbody.appendChild(h2);
+        const cur = document.createElement("button");
+        cur.className = "fontcurrent";
+        cur.innerHTML = `<span class="fc-sample"></span><span class="fc-meta"><b></b><small>${FONT_CATALOG.length.toLocaleString("id-ID")} font tersedia — ketuk untuk mencari</small></span><span class="fc-chev">›</span>`;
+        const fcSample = cur.querySelector(".fc-sample");
+        fcSample.textContent = (el.text.split("\n")[0] || "Anya & Dimas").slice(0, 24);
+        fcSample.style.fontFamily = fam(el.font);
+        cur.querySelector("b").textContent = famName(el.font);
+        cur.addEventListener("click", () => openFontPicker(el));
+        tabbody.appendChild(cur);
+        const fg = document.createElement("div"); fg.className = "fontgrid";
+        CURATED_FONTS.forEach((name) => {
+          const b = document.createElement("button");
+          b.className = "fontchip" + (famName(el.font) === name ? " on" : "");
+          b.innerHTML = `<span class="sample" style="font-family:'${name}'">Anya &amp; Dimas</span><span class="fname">${name}</span>`;
+          b.addEventListener("click", async () => { await loadFontFull(name); el.font = name; refreshEl(el); commit(); renderPanel(); });
+          fg.appendChild(b);
+        });
+        tabbody.appendChild(fg);
+
+        const h3 = document.createElement("h3"); h3.textContent = "Ukuran & jarak"; tabbody.appendChild(h3);
+        tabbody.appendChild(rangeCtl("Ukuran huruf", 10, 200, 1, el.size, (v) => v + " px",
+          (v) => { el.size = v; refreshEl(el); }));
+        tabbody.appendChild(rangeCtl("Jarak antar baris", 1, 2, 0.05, el.lh, (v) => v.toFixed(2) + "×",
+          (v) => { el.lh = v; refreshEl(el); }));
+        tabbody.appendChild(rangeCtl("Jarak antar huruf", -2, 24, 0.5, el.ls, (v) => v + " px",
+          (v) => { el.ls = v; refreshEl(el); }));
+
+        const h4 = document.createElement("h3"); h4.textContent = "Warna teks"; tabbody.appendChild(h4);
+        tabbody.appendChild(swatchRow(INK_SWATCHES, el.color,
+          (c, commitIt) => { el.color = c; refreshEl(el); if (commitIt !== false) { commit(); renderPanel(); } }, true));
+
+        const h5 = document.createElement("h3"); h5.textContent = "Gaya & perataan"; tabbody.appendChild(h5);
+        const seg = document.createElement("div"); seg.className = "segrow";
+        const mkSeg = (label, on, fn) => {
+          const b = document.createElement("button");
+          b.className = "seg" + (on ? " on" : ""); b.innerHTML = label;
+          b.addEventListener("click", fn); seg.appendChild(b); return b;
+        };
+        mkSeg("<b>B</b>", el.bold, () => { el.bold = !el.bold; refreshEl(el); commit(); renderPanel(); });
+        mkSeg("<i>I</i>", el.italic, () => { el.italic = !el.italic; refreshEl(el); commit(); renderPanel(); });
+        tabbody.appendChild(seg);
+        const seg2 = document.createElement("div"); seg2.className = "segrow"; seg2.style.marginTop = "8px";
+        [["left", "M3 6h18M3 12h10M3 18h18"], ["center", "M3 6h18M7 12h10M3 18h18"], ["right", "M3 6h18M11 12h10M3 18h18"]].forEach(([a, d]) => {
+          const b = document.createElement("button");
+          b.className = "seg" + (el.align === a ? " on" : "");
+          b.setAttribute("aria-label", "Rata " + a);
+          b.innerHTML = `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="${d}"/></svg>`;
+          b.addEventListener("click", () => { el.align = a; refreshEl(el); commit(); renderPanel(); });
+          seg2.appendChild(b);
+        });
+        tabbody.appendChild(seg2);
+      }
+
+      function renderImageControls(el) {
+        const h = document.createElement("h3"); h.textContent = "Foto"; tabbody.appendChild(h);
+        const b = document.createElement("button");
+        b.className = "addbtn";
+        b.innerHTML = `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg><span>Ganti foto<small>Ambil foto kamu dari galeri</small></span>`;
+        b.addEventListener("click", () => pickPhoto((src, nw, nh) => {
+          el.src = src; el.nw = nw; el.nh = nh; el.zoom = 1; el.px = 0; el.py = 0;
+          refreshEl(el); commit(); toast("Foto diganti.");
+        }));
+        tabbody.appendChild(b);
+
+        const h2 = document.createElement("h3"); h2.textContent = "Bentuk bingkai"; tabbody.appendChild(h2);
+        const seg = document.createElement("div"); seg.className = "segrow";
+        [["arch", "Lengkung"], ["circle", "Lingkaran"], ["oval", "Oval"], ["rounded", "Tumpul"], ["straight", "Kotak"]].forEach(([s, label]) => {
+          const bb = document.createElement("button");
+          bb.className = "seg" + (el.shape === s ? " on" : ""); bb.textContent = label; bb.style.flex = "1 1 30%";
+          bb.addEventListener("click", () => { el.shape = s; refreshEl(el); commit(); renderPanel(); });
+          seg.appendChild(bb);
+        });
+        tabbody.appendChild(seg);
+
+        const h3 = document.createElement("h3"); h3.textContent = "Posisi foto di bingkai"; tabbody.appendChild(h3);
+        tabbody.appendChild(rangeCtl("Perbesar (zoom)", 1, 3, 0.01, el.zoom, (v) => Math.round(v * 100) + "%",
+          (v) => { el.zoom = v; refreshEl(el); }));
+        tabbody.appendChild(rangeCtl("Geser kiri — kanan", -100, 100, 1, el.px, (v) => v,
+          (v) => { el.px = v; refreshEl(el); }));
+        tabbody.appendChild(rangeCtl("Geser atas — bawah", -100, 100, 1, el.py, (v) => v,
+          (v) => { el.py = v; refreshEl(el); }));
+      }
+
+      function renderDividerControls(el) {
+        const h = document.createElement("h3"); h.textContent = "Warna ornamen"; tabbody.appendChild(h);
+        tabbody.appendChild(swatchRow(INK_SWATCHES, el.color,
+          (c, commitIt) => { el.color = c; refreshEl(el); if (commitIt !== false) { commit(); renderPanel(); } }, true));
+        const h2 = document.createElement("h3"); h2.textContent = "Lebar"; tabbody.appendChild(h2);
+        tabbody.appendChild(rangeCtl("Lebar garis", 120, 800, 5, el.w, (v) => v + " px",
+          (v) => { el.w = v; el.x = Math.round(el.x); refreshEl(el); }));
+      }
+
+      function renderCommonControls(el) {
+        const h = document.createElement("h3"); h.textContent = "Posisi halus"; tabbody.appendChild(h);
+        const pad = document.createElement("div"); pad.className = "nudgepad";
+        const steps = [["", ""], ["↑", () => { el.y -= 4; }], ["", ""], ["←", () => { el.x -= 4; }], ["Tengah", () => { el.x = Math.round((W - el.w) / 2); }], ["→", () => { el.x += 4; }], ["", ""], ["↓", () => { el.y += 4; }], ["", ""]];
+        steps.forEach(([label, fn]) => {
+          const b = document.createElement("button");
+          if (!label) { b.className = "blank"; b.tabIndex = -1; }
+          else {
+            b.textContent = label;
+            if (label === "Tengah") b.style.fontSize = "12px";
+            b.addEventListener("click", () => { fn(); refreshEl(el); commit(); });
+          }
+          pad.appendChild(b);
+        });
+        tabbody.appendChild(pad);
+
+        const h2 = document.createElement("h3"); h2.textContent = "Elemen"; tabbody.appendChild(h2);
+        const row = document.createElement("div"); row.className = "actrow";
+        const mk = (label, cls, fn) => {
+          const b = document.createElement("button");
+          b.className = "actbtn" + (cls ? " " + cls : ""); b.textContent = label;
+          b.addEventListener("click", fn); row.appendChild(b);
+        };
+        mk("Duplikat", "", () => duplicateEl(el));
+        mk("Ke depan", "", () => moveLayer(el, 1));
+        mk("Ke belakang", "", () => moveLayer(el, -1));
+        mk("Hapus", "danger", () => deleteEl(el));
+        tabbody.appendChild(row);
+      }
+
+      function renderLayersTab() {
+        const h = document.createElement("h3"); h.textContent = "Lapisan (atas = paling depan)"; tabbody.appendChild(h);
+        if (!state.elements.length) {
+          const p = document.createElement("p"); p.className = "hint"; p.textContent = "Belum ada elemen.";
+          tabbody.appendChild(p); return;
+        }
+        [...state.elements].reverse().forEach((el) => {
+          const item = document.createElement("div");
+          item.className = "layeritem" + (el.id === state.selectedId ? " on" : "");
+          const tag = el.type === "text" ? "Teks" : el.type === "image" ? "Foto" : "Hiasan";
+          const snip = el.type === "text" ? el.text.replace(/\n/g, " ").slice(0, 42) : el.type === "image" ? "Foto mempelai" : "Garis ornamen";
+          item.innerHTML = `<span class="tag">${tag}</span><span class="snip"></span>
+            <span class="mv"><button data-mv="1" aria-label="Naikkan lapisan">▲</button><button data-mv="-1" aria-label="Turunkan lapisan">▼</button></span>`;
+          item.querySelector(".snip").textContent = snip;
+          item.addEventListener("click", (e) => {
+            const mv = e.target.closest("[data-mv]");
+            if (mv) { moveLayer(el, parseInt(mv.dataset.mv, 10)); return; }
+            select(el.id);
+          });
+          tabbody.appendChild(item);
+        });
+      }
+
+      /* ---------- Aksi elemen ---------- */
+      function duplicateEl(el) {
+        const c = JSON.parse(JSON.stringify(el));
+        c.id = uid(); c.x += 24; c.y += 24;
+        state.elements.splice(state.elements.indexOf(el) + 1, 0, c);
+        commit(); renderBoard(); select(c.id);
+        toast("Elemen diduplikat.");
+      }
+      function deleteEl(el) {
+        state.elements = state.elements.filter((x) => x.id !== el.id);
+        state.selectedId = null;
+        commit(); renderAll();
+        toast("Elemen dihapus. Tombol urungkan bisa mengembalikannya.");
+      }
+      function moveLayer(el, dir) {
+        const i = state.elements.indexOf(el);
+        const j = i + dir;
+        if (j < 0 || j >= state.elements.length) return;
+        state.elements.splice(i, 1);
+        state.elements.splice(j, 0, el);
+        commit(); renderBoard(); renderPanel(); positionSelbox();
+      }
+      $("sbDup").addEventListener("click", () => { const el = sel(); if (el) duplicateEl(el); });
+      $("sbDel").addEventListener("click", () => { const el = sel(); if (el) deleteEl(el); });
+      $("sbFront").addEventListener("click", () => { const el = sel(); if (el) moveLayer(el, 1); });
+      $("sbBack").addEventListener("click", () => { const el = sel(); if (el) moveLayer(el, -1); });
+
+      /* ---------- Ambil foto dari perangkat ---------- */
+      let photoCb = null;
+      function pickPhoto(cb) { photoCb = cb; $("fileInput").click(); }
+      $("fileInput").addEventListener("change", (e) => {
+        const f = e.target.files && e.target.files[0];
+        e.target.value = "";
+        if (!f || !photoCb) return;
+        const rd = new FileReader();
+        rd.onload = () => {
+          const im = new Image();
+          im.onload = () => { photoCb(rd.result, im.naturalWidth, im.naturalHeight); photoCb = null; };
+          im.src = rd.result;
+        };
+        rd.readAsDataURL(f);
+      });
+
+      /* ---------- Zoom & pratinjau ---------- */
+      $("zoomIn").addEventListener("click", () => { state.zoom = Math.min(2.5, state.zoom * 1.2); layout(); });
+      $("zoomOut").addEventListener("click", () => { state.zoom = Math.max(0.4, state.zoom / 1.2); layout(); });
+      $("zoomFit").addEventListener("click", () => { state.zoom = 1; layout(); });
+      window.addEventListener("resize", layout);
+      $("previewBtn").addEventListener("click", () => {
+        select(null, false);
+        document.body.classList.add("preview");
+        layout();
+      });
+      $("exitPreview").addEventListener("click", () => {
+        document.body.classList.remove("preview");
+        layout();
+      });
+      $("undoBtn").addEventListener("click", undo);
+      $("redoBtn").addEventListener("click", redo);
+
+      /* ---------- Toast ---------- */
+      let toastTimer = null;
+      function toast(msg) {
+        const t = $("toast");
+        t.textContent = msg;
+        t.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove("show"), 3400);
+      }
+
+      /* ---------- Pemilih font (pustaka Google Fonts) ---------- */
+      const fp = { target: null, changed: false, q: "", cat: "all", shown: 50 };
+      const FP_PAGE = 50;
+      function fpMatches() {
+        const q = fp.q.trim().toLowerCase();
+        const want = fp.cat === "all" || fp.cat === "fav" ? fp.cat : parseInt(fp.cat, 10);
+        return FONT_CATALOG.filter(([name, cat]) => {
+          if (want === "fav") { if (!CURATED_FONTS.includes(name)) return false; }
+          else if (want !== "all" && cat !== want) return false;
+          return !q || name.toLowerCase().includes(q);
+        });
+      }
+      function openFontPicker(el) {
+        fp.target = el; fp.changed = false; fp.q = ""; fp.cat = "all"; fp.shown = FP_PAGE;
+        $("fpSearch").value = "";
+        $("fpCount").textContent = FONT_CATALOG.length.toLocaleString("id-ID") + " font dari Google Fonts · ketuk untuk pratinjau langsung";
+        document.querySelectorAll("#fpCats button").forEach((b) => b.classList.toggle("on", b.dataset.cat === "all"));
+        $("fontpicker").classList.add("open");
+        document.body.style.overflow = "hidden";
+        renderFpList();
+      }
+      function closeFontPicker() {
+        $("fontpicker").classList.remove("open");
+        document.body.style.overflow = "";
+        if (fp.changed) commit();
+        fp.target = null;
+        renderPanel();
+      }
+      function renderFpList() {
+        const host = $("fpList");
+        host.innerHTML = "";
+        const all = fpMatches();
+        const cur = fp.target ? famName(fp.target.font) : "";
+        all.slice(0, fp.shown).forEach(([name, cat]) => {
+          loadFontPreview(name);
+          const b = document.createElement("button");
+          b.className = "fp-row" + (name === cur ? " on" : "");
+          b.innerHTML = `<span class="fp-sample" style="font-family:'${name}', serif">Anya &amp; Dimas</span><span class="fp-meta"><b></b><small>${FONT_CATS[cat]}</small></span>${name === cur ? '<span class="fp-check">✓</span>' : ""}`;
+          b.querySelector("b").textContent = name;
+          b.addEventListener("click", async () => {
+            if (!fp.target) return;
+            b.querySelector(".fp-sample").style.opacity = ".45";
+            await loadFontFull(name);
+            b.querySelector(".fp-sample").style.opacity = "";
+            if (!fp.target) return;
+            fp.target.font = name;
+            fp.changed = true;
+            refreshEl(fp.target);
+            host.querySelectorAll(".fp-row").forEach((r) => r.classList.remove("on"));
+            b.classList.add("on");
+            const fc = $("fpCurrent");
+            fc.innerHTML = "Dipakai sekarang: <b></b>";
+            fc.querySelector("b").textContent = name;
+          });
+          host.appendChild(b);
+        });
+        if (!all.length) {
+          const p = document.createElement("p");
+          p.className = "hint"; p.style.padding = "18px 10px";
+          p.textContent = "Tidak ada font yang cocok dengan pencarian itu. Coba kata kunci lain, misalnya nama gaya: script, serif, atau handwriting.";
+          host.appendChild(p);
+        } else if (all.length > fp.shown) {
+          const more = document.createElement("button");
+          more.className = "fp-more";
+          more.textContent = `Tampilkan lebih banyak (${(all.length - fp.shown).toLocaleString("id-ID")} font lagi)`;
+          more.addEventListener("click", () => { fp.shown += FP_PAGE; renderFpList(); host.scrollTop = host.scrollHeight - host.clientHeight - 400; });
+          host.appendChild(more);
+        }
+        const fc = $("fpCurrent");
+        fc.innerHTML = "Dipakai sekarang: <b></b>";
+        fc.querySelector("b").textContent = cur || "—";
+      }
+      let fpSearchTimer = null;
+      $("fpSearch").addEventListener("input", (e) => {
+        clearTimeout(fpSearchTimer);
+        fpSearchTimer = setTimeout(() => { fp.q = e.target.value; fp.shown = FP_PAGE; renderFpList(); $("fpList").scrollTop = 0; }, 130);
+      });
+      document.querySelectorAll("#fpCats button").forEach((b) =>
+        b.addEventListener("click", () => {
+          fp.cat = b.dataset.cat; fp.shown = FP_PAGE;
+          document.querySelectorAll("#fpCats button").forEach((x) => x.classList.toggle("on", x === b));
+          renderFpList();
+          $("fpList").scrollTop = 0;
+        }));
+      $("fpClose").addEventListener("click", closeFontPicker);
+      $("fpDone").addEventListener("click", closeFontPicker);
+
+      /* ---------- Ekspor resolusi cetak ---------- */
+      const imgCache = new Map();
+      function loadImg(src) {
+        if (imgCache.has(src)) return imgCache.get(src);
+        const p = new Promise((res, rej) => {
+          const im = new Image();
+          im.onload = () => res(im);
+          im.onerror = rej;
+          im.src = src;
+        });
+        imgCache.set(src, p);
+        return p;
+      }
+      function svgImage(svgStr, w, h) {
+        return new Promise((res, rej) => {
+          const withSize = svgStr.replace("<svg ", `<svg width="${w}" height="${h}" `);
+          const url = URL.createObjectURL(new Blob([withSize], { type: "image/svg+xml;charset=utf-8" }));
+          const im = new Image();
+          im.onload = () => { res({ im, url }); };
+          im.onerror = (e) => { URL.revokeObjectURL(url); rej(e); };
+          im.src = url;
+        });
+      }
+      function canvasBg(x, s, w, h) {
+        if (s.kind === "solid") { x.fillStyle = s.c; x.fillRect(0, 0, w, h); return; }
+        let g;
+        if (s.kind === "linear") {
+          g = s.dir === "d" ? x.createLinearGradient(0, 0, w, h) : x.createLinearGradient(0, 0, 0, h);
+        } else {
+          g = x.createRadialGradient(w / 2, h * 0.3, 10, w / 2, h * 0.3, h * 0.75);
+        }
+        s.stops.forEach(([p, c]) => g.addColorStop(p, c));
+        x.fillStyle = g; x.fillRect(0, 0, w, h);
+      }
+      function clipShape(x, el, k) {
+        const X = el.x * k, Y = el.y * k, w = el.w * k, h = el.h * k;
+        x.beginPath();
+        if (el.shape === "circle" || el.shape === "oval") {
+          x.ellipse(X + w / 2, Y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+        } else if (el.shape === "arch") {
+          const r = w / 2;
+          x.moveTo(X, Y + h); x.lineTo(X, Y + r); x.arc(X + r, Y + r, r, Math.PI, 0);
+          x.lineTo(X + w, Y + h); x.closePath();
+        } else {
+          const r = (el.shape === "straight" ? 6 : 26) * k;
+          if (x.roundRect) x.roundRect(X, Y, w, h, r); else x.rect(X, Y, w, h);
+        }
+        x.clip();
+      }
+      function drawDividerCanvas(x, el, k) {
+        const X = el.x * k, Y = (el.y + el.h / 2) * k, w = el.w * k;
+        const lw = Math.max(1.4, 1.8 * k);
+        x.strokeStyle = el.color; x.fillStyle = el.color; x.lineWidth = lw;
+        const gap1 = w * (118 / 300), gap2 = w * (182 / 300);
+        x.beginPath(); x.moveTo(X + w * (4 / 300), Y); x.lineTo(X + gap1, Y); x.stroke();
+        x.beginPath(); x.moveTo(X + gap2, Y); x.lineTo(X + w * (296 / 300), Y); x.stroke();
+        const dot = (cx, r) => { x.beginPath(); x.arc(cx, Y, r * k, 0, Math.PI * 2); x.fill(); };
+        dot(X + w * (128 / 300), 2.6); dot(X + w * (172 / 300), 2.6); dot(X + w / 2, 2.4);
+        const cx = X + w / 2, s = 9 * k;
+        x.beginPath();
+        x.moveTo(cx, Y - s); x.lineTo(cx + s, Y); x.lineTo(cx, Y + s); x.lineTo(cx - s, Y);
+        x.closePath(); x.stroke();
+      }
+      function drawTextCanvas(x, el, k) {
+        x.font = `${el.italic ? "italic " : ""}${el.bold ? "700 " : "400 "}${el.size * k}px ${fam(el.font)}`;
+        try { x.letterSpacing = el.ls * k + "px"; } catch (e) { /* browser lama */ }
+        x.fillStyle = el.color;
+        x.textBaseline = "top";
+        const maxW = el.w * k;
+        const lhPx = el.size * k * el.lh;
+        const lines = [];
+        el.text.split("\n").forEach((para) => {
+          if (para === "") { lines.push(""); return; }
+          const words = para.split(/\s+/);
+          let cur = "";
+          words.forEach((wd) => {
+            const t = cur ? cur + " " + wd : wd;
+            if (cur && x.measureText(t).width > maxW) { lines.push(cur); cur = wd; }
+            else cur = t;
+          });
+          lines.push(cur);
+        });
+        lines.forEach((ln, i) => {
+          const lw = x.measureText(ln).width;
+          let tx = el.x * k;
+          if (el.align === "center") tx = el.x * k + (maxW - lw) / 2;
+          else if (el.align === "right") tx = el.x * k + (maxW - lw);
+          x.fillText(ln, tx, el.y * k + i * lhPx);
+        });
+        try { x.letterSpacing = "0px"; } catch (e) {}
+      }
+      async function renderPrintCanvas(pxW) {
+        await Promise.all(
+          state.elements.filter((e) => e.type === "text").map((e) => loadFontFull(e.font))
+        );
+        await document.fonts.ready;
+        const k = pxW / W, pxH = Math.round(H * k);
+        const c = document.createElement("canvas");
+        c.width = pxW; c.height = pxH;
+        const x = c.getContext("2d");
+        canvasBg(x, state.bg, pxW, pxH);
+        const d = await svgImage(decorSVG(state.template), pxW, pxH);
+        x.drawImage(d.im, 0, 0, pxW, pxH);
+        URL.revokeObjectURL(d.url);
+        for (const el of state.elements) {
+          if (el.type === "image") {
+            const im = await loadImg(el.src);
+            if (!el.nw) { el.nw = im.naturalWidth; el.nh = im.naturalHeight; }
+            x.save();
+            clipShape(x, el, k);
+            const g = imgGeom(el);
+            x.drawImage(im, g.dx * k, g.dy * k, g.dw * k, g.dh * k);
+            x.restore();
+          } else if (el.type === "text") {
+            drawTextCanvas(x, el, k);
+          } else if (el.type === "divider") {
+            drawDividerCanvas(x, el, k);
+          }
+        }
+        return c;
+      }
+      function saveBlob(blob, name) {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+      }
+      async function exportPNG(btn) {
+        btn.disabled = true;
+        try {
+          const c = await renderPrintCanvas(2480);
+          const blob = await new Promise((r) => c.toBlob(r, "image/png"));
+          saveBlob(blob, "undangan-pernikahan.png");
+          toast("PNG tersimpan — 2480 × 3508 px (300 DPI), siap dibawa ke percetakan.");
+        } catch (err) {
+          toast("Maaf, ekspor PNG gagal. Coba lagi ya.");
+        }
+        btn.disabled = false;
+        $("dlmenu").classList.remove("open");
+      }
+      async function exportPDF(btn) {
+        btn.disabled = true;
+        try {
+          const c = await renderPrintCanvas(2480);
+          const jpg = c.toDataURL("image/jpeg", 0.96);
+          if (window.jspdf && window.jspdf.jsPDF) {
+            const doc = new window.jspdf.jsPDF({ unit: "mm", format: "a5", orientation: "portrait" });
+            doc.addImage(jpg, "JPEG", 0, 0, 148, 210);
+            doc.save("undangan-pernikahan.pdf");
+            toast("PDF siap cetak tersimpan — ukuran A5, 300 DPI.");
+          } else {
+            const blob = await new Promise((r) => c.toBlob(r, "image/png"));
+            saveBlob(blob, "undangan-pernikahan.png");
+            toast("Pustaka PDF tidak termuat, jadi PNG resolusi tinggi yang diunduh — tetap siap cetak.");
+          }
+        } catch (err) {
+          toast("Maaf, ekspor PDF gagal. Coba unduh PNG-nya ya.");
+        }
+        btn.disabled = false;
+        $("dlmenu").classList.remove("open");
+      }
+      $("dlPng").addEventListener("click", (e) => exportPNG(e.currentTarget));
+      $("dlPdf").addEventListener("click", (e) => exportPDF(e.currentTarget));
+      $("dlBtn").addEventListener("click", (e) => { e.stopPropagation(); $("dlmenu").classList.toggle("open"); });
+      document.addEventListener("click", (e) => {
+        if (!e.target.closest("#dlwrap")) $("dlmenu").classList.remove("open");
+      });
+
+      /* ---------- Keyboard (desktop) ---------- */
+      window.addEventListener("keydown", (e) => {
+        const tag = (e.target.tagName || "").toLowerCase();
+        if (tag === "input" || tag === "textarea" || e.target.isContentEditable) return;
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+        else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); }
+        else if ((e.key === "Delete" || e.key === "Backspace") && sel()) { e.preventDefault(); deleteEl(sel()); }
+        else if (e.key === "Escape") select(null, false);
+      });
+
+      /* ---------- Mulai ---------- */
+      state.elements = TEMPLATES.emas.make();
+      commit();
+      renderAll();
+    </script>
+  </body>
+</html>

@@ -18,8 +18,19 @@ Website editor undangan pernikahan — customer edit template sendiri di HP, leb
 - **1.580 objek teks** yang bisa diedit (posisi/font/ukuran/warna diambil dari file .ai), font dipetakan ke Google Fonts (mis. Armelie/Birds of Paradise → Great Vibes, Trajan Pro → Cinzel, Century Gothic → Jost; Times New Roman → font sistem)
 - Ekspor CL: PNG landscape 1200×877 per halaman aktif + PDF landscape semua halaman. Template portrait lama tidak berubah.
 - Di-skip sesuai keputusan wood: 13 CL tanpa master (CL17, CL24, CL31–CL34, CL37–CL43) dan seluruh seri CLA/CLE/CLM/KUT.
-- Data konversi: `~/workspace/undangan-template/cl-conversion.json` (tidak di repo).
-- **Cara melihat:** repo ini tidak dirender GitHub — buka `index.html` langsung di browser (klik dua kali / drag ke browser HP/komputer, butuh internet untuk font Google). Belum terverifikasi live: render font Google saat runtime, unduh jsPDF, dan cek interaktif ganti halaman/edit/ekspor.
+## Struktur project (16 Nov 2026 — bukan satu file lagi)
+
+- `index.html` — entry tipis (9,4 KB), memuat CSS + modul JS
+- `assets/src/css/editor.css` — styling
+- `assets/src/js/` — 8 modul (vault, core, elements, templates, canvas, panel, picker, export), di-minify
+- `assets/src/data/` — data template CL, QR + warna QR, katalog font — tersimpan terenkode (base64 + XOR berkunci), didekode di memori browser saat berjalan. Ini penghalang duplikasi, bukan perlindungan mutlak: browser harus bisa decode untuk menjalankan editor; perlindungan penuh butuh backend.
+- `assets/cl/` — 61 gambar master + `assets/cl/qr/` 30 QR map berwarna
+
+## QR map + garis lipat (16 Nov 2026)
+
+- QR map asli di semua 30 template CL (bukan cuma teks "QR MAP LOKASI"), mengarah ke venue tiap template via Google Maps; customer bisa ketuk QR → isi alamat/tempel link Google Maps → "Perbarui kode QR". QR berwarna mengikuti warna teks template (CL1 merah, CL28 hijau zaitun, dst; latar putih, kontras dicek ≥4,5).
+- Garis lipat: tick kecil di 25%/75% lebar halaman (hal. 2 saja); pembatas panel — teks tidak bisa melewati garis lipat saat digeser/di-resize.
+- **Cara melihat:** repo ini tidak dirender GitHub — buka `index.html` langsung di browser (klik dua kali / drag ke browser HP/komputer, butuh internet untuk font Google), atau deploy ke Vercel (situs statis murni: Framework Other, Root/Output `./`, Build/Install Command kosong, tanpa env var).
 
 ## Yang belum ada (draf, belum dibangun)
 

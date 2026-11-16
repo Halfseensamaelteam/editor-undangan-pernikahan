@@ -11,12 +11,22 @@ Website editor undangan pernikahan — customer edit template sendiri di HP, leb
 - Ganti foto dari galeri, 5 bentuk bingkai foto, zoom/geser foto, warna, perataan, urutan lapisan, undo/redo, zoom kanvas, mode Pratinjau
 - Ekspor: PDF A5 siap cetak atau PNG 2480×3508 px (300 DPI), digambar ulang di canvas — bukan screenshot
 
+## Template asli CL — konversi selesai (16 Nov 2026)
+
+- **30 template CL berhasil, 0 gagal:** CL1–16, CL18–23, CL25–30, CL35, CL36 (seksi "Template Asli (CL)" di pemilih template)
+- Tiap template CL = **2 halaman LANDSCAPE** 1200×877 px, tombol Halaman 1/2 (CL23: 3 halaman, hal. 3 = kartu "Kepada Yth."), background = gambar master cetak asli yang dioptimasi untuk web (61 file di `assets/cl/`, 5,9 MB total — file HD 3071 px untuk cetak TIDAK masuk repo)
+- **1.580 objek teks** yang bisa diedit (posisi/font/ukuran/warna diambil dari file .ai), font dipetakan ke Google Fonts (mis. Armelie/Birds of Paradise → Great Vibes, Trajan Pro → Cinzel, Century Gothic → Jost; Times New Roman → font sistem)
+- Ekspor CL: PNG landscape 1200×877 per halaman aktif + PDF landscape semua halaman. Template portrait lama tidak berubah.
+- Di-skip sesuai keputusan wood: 13 CL tanpa master (CL17, CL24, CL31–CL34, CL37–CL43) dan seluruh seri CLA/CLE/CLM/KUT.
+- Data konversi: `~/workspace/undangan-template/cl-conversion.json` (tidak di repo).
+- **Cara melihat:** repo ini tidak dirender GitHub — buka `index.html` langsung di browser (klik dua kali / drag ke browser HP/komputer, butuh internet untuk font Google). Belum terverifikasi live: render font Google saat runtime, unduh jsPDF, dan cek interaktif ganti halaman/edit/ekspor.
+
 ## Yang belum ada (draf, belum dibangun)
 
 1. **Autosave** — desain hilang kalau customer tutup tab / HP refresh di tengah edit. Rencana: simpan otomatis tiap edit + "Lanjutkan desain terakhir".
 2. **Jalur order** — editor berhenti di Unduh. Rencana: tombol "Pesan & Cetak via WhatsApp" di header, membuka WA dengan pesan terisi otomatis (template, nama mempelai, tanggal, jumlah cetak). WA tidak bisa melampirkan file otomatis dari web, jadi customer tetap unduh PDF/PNG dulu lalu kirim manual di chat.
 
-Menunggu keputusan wood: nomor WA untuk tombol order, order lewat WA atau bayar langsung di website, setuju bangun autosave?, template .ai mana yang dikonversi pertama.
+Menunggu keputusan wood: nomor WA untuk tombol order, order lewat WA atau bayar langsung di website, setuju bangun autosave?
 
 ## Cara upload file template .ai / .zip / .rar (500 MB)
 

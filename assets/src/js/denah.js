@@ -66,19 +66,26 @@ const DD_OVERPASS_EPS = [
   "https://overpass.kumi.systems/api/interpreter",
   "https://overpass.nchc.org.tw/api/interpreter"
 ];
-async function ddOverpass(lat, lon, onFallback) {
-  const q = '[out:json][timeout:25];(way["highway"]["name"](around:470,' + lat + "," + lon + ');way["amenity"~"place_of_worship|school"](around:470,' + lat + "," + lon + ');node["amenity"~"place_of_worship|school"](around:470,' + lat + "," + lon + ');way["building"]["name"](around:470,' + lat + "," + lon + '););out geom;';
+async function ddOverpass(lat, lon, onProgress) {
+  /* Query dibuat seringan mungkin: radius diperkecil (470→320 m, denah tetap
+     terisi di tengah) dan klausa way["building"] dibuang — klausa itu menarik
+     geometri semua bangunan bernama dan membuat respons membengkak (±139 KB,
+     ±35 dtk), yang selalu timeout di koneksi HP yang lambat. Patokan dari
+     bangunan bernama tetap tertangkap lewat klausa amenity di bawah.
+     Timeout per server diperpanjang (60 dtk) karena server Overpass publik
+     memang lambat merespons; status dialog menunjukkan server ke berapa yang
+     sedang dicoba supaya pengguna tahu prosesnya masih berjalan. */
+  const q = '[out:json][timeout:55];(way["highway"]["name"](around:320,' + lat + "," + lon + ');way["amenity"~"place_of_worship|school"](around:320,' + lat + "," + lon + ');node["amenity"~"place_of_worship|school"](around:320,' + lat + "," + lon + '););out geom;';
   const body = "data=" + encodeURIComponent(q);
   for (let i = 0; i < DD_OVERPASS_EPS.length; i++) {
+    if (onProgress) onProgress(i + 1, DD_OVERPASS_EPS.length);
     try {
-      const r = await ddFetch(DD_OVERPASS_EPS[i], { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" }, body: body }, 32000);
+      const r = await ddFetch(DD_OVERPASS_EPS[i], { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" }, body: body }, 60000);
       if (!r.ok) throw new Error("overpass " + r.status);
       const j = await r.json();
       if (!j || !Array.isArray(j.elements)) throw new Error("overpass bad");
       return j;
-    } catch (e) {
-      if (i < DD_OVERPASS_EPS.length - 1 && onFallback) onFallback(i + 1);
-    }
+    } catch (e) { /* lanjut ke server berikutnya */ }
   }
   throw ddMapFail();
 }
@@ -346,7 +353,9 @@ async function ddGenerate() {
     go.disabled = true; go.textContent = "Membuat…";
     ddShowStatus("Sedang mencari lokasi dan menggambar denah dari peta sekitar venue…");
     try {
-      denahUrl = await ddMakeDenah(input, () => ddShowStatus("Server peta pertama tidak merespons — mencoba server peta cadangan…"));
+      denahUrl = await ddMakeDenah(input, (n, total) => ddShowStatus(n <= 1
+        ? "Menghubungi server peta 1 dari " + total + "… server peta publik kadang lambat — di koneksi pelan bisa sampai 1 menit, mohon ditunggu."
+        : "Server peta " + (n - 1) + " tidak merespons — mencoba server peta " + n + " dari " + total + "…"));
     } catch (e) {
       ddBusy = false; go.disabled = false; go.textContent = "Hasilkan"; ddShowStatus("");
       ddShowErr(e && e.notfound

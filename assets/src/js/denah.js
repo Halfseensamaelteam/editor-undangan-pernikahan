@@ -1,6 +1,8 @@
 /* Hasilkan Denah / QR — dialog + pembuat denah vektor langsung di browser.
-   Denah digambar dari data OpenStreetMap (geocode Nominatim + jalan/patokan dari Overpass),
+   Denah digambar dari data OpenStreetMap (geocode Nominatim/Photon + jalan/patokan dari Overpass),
    dengan desain yang sama seperti denah vektor Heritage Garden Venue.
+   Semua layanan peta dicoba bergantian ke server cadangan kalau server pertamanya
+   gagal merespons — server Overpass utama sering menolak (406/429) atau timeout.
    Venue Heritage memakai file SVG yang dibundel, tanpa perlu internet. */
 const HERITAGE_LL = { lat: -6.3215125, lon: 106.9070101 };
 const HERITAGE_SVG_URL = "assets/denah/heritage-garden-venue-denah-vektor.svg";
@@ -29,18 +31,56 @@ function ddFetch(url, opts, ms) {
   const c = new AbortController(), t = setTimeout(() => c.abort(), ms || 20000);
   return fetch(url, Object.assign({}, opts || {}, { signal: c.signal })).finally(() => clearTimeout(t));
 }
-async function ddGeocode(q) {
+function ddNotFound() { const e = new Error("notfound"); e.notfound = true; return e; }
+function ddMapFail() { const e = new Error("mapfail"); e.mapfail = true; return e; }
+async function ddGeocodeNominatim(q) {
   const r = await ddFetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + encodeURIComponent(q), { headers: { Accept: "application/json" } }, 15000);
   if (!r.ok) throw new Error("nominatim " + r.status);
   const j = await r.json();
-  if (!j || !j.length) { const e = new Error("notfound"); e.notfound = true; throw e; }
+  if (!j || !j.length) throw ddNotFound();
   return { lat: parseFloat(j[0].lat), lon: parseFloat(j[0].lon) };
 }
-async function ddOverpass(lat, lon) {
+async function ddGeocodePhoton(q) {
+  const r = await ddFetch("https://photon.komoot.io/api/?limit=1&q=" + encodeURIComponent(q), { headers: { Accept: "application/json" } }, 15000);
+  if (!r.ok) throw new Error("photon " + r.status);
+  const j = await r.json();
+  const f = j && j.features && j.features[0];
+  if (!f || !f.geometry || !f.geometry.coordinates) throw ddNotFound();
+  return { lat: parseFloat(f.geometry.coordinates[1]), lon: parseFloat(f.geometry.coordinates[0]) };
+}
+/* Geocode dicoba ke dua layanan bergantian: kegagalan respons di layanan pertama
+   (server sibuk/ditolak) tidak langsung dianggap "alamat tidak ditemukan". */
+async function ddGeocode(q) {
+  let sawNotFound = false;
+  try { return await ddGeocodeNominatim(q); } catch (e) { if (e && e.notfound) sawNotFound = true; }
+  try { return await ddGeocodePhoton(q); } catch (e) { if (e && e.notfound) sawNotFound = true; }
+  if (sawNotFound) throw ddNotFound();
+  throw ddMapFail();
+}
+/* Server Overpass publik — daftar yang sama seperti yang dipakai Overpass Turbo.
+   Server utama overpass-api.de hanya satu-satunya jalur sebelumnya, dan ia yang
+   menolak permintaan ini (406/429/timeout) sampai denah selalu gagal dibuat;
+   sekarang kegagalan di satu server otomatis lanjut ke server berikutnya. */
+const DD_OVERPASS_EPS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.nchc.org.tw/api/interpreter"
+];
+async function ddOverpass(lat, lon, onFallback) {
   const q = '[out:json][timeout:25];(way["highway"]["name"](around:470,' + lat + "," + lon + ');way["amenity"~"place_of_worship|school"](around:470,' + lat + "," + lon + ');node["amenity"~"place_of_worship|school"](around:470,' + lat + "," + lon + ');way["building"]["name"](around:470,' + lat + "," + lon + '););out geom;';
-  const r = await ddFetch("https://overpass-api.de/api/interpreter", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" }, body: "data=" + encodeURIComponent(q) }, 35000);
-  if (!r.ok) throw new Error("overpass " + r.status);
-  return r.json();
+  const body = "data=" + encodeURIComponent(q);
+  for (let i = 0; i < DD_OVERPASS_EPS.length; i++) {
+    try {
+      const r = await ddFetch(DD_OVERPASS_EPS[i], { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" }, body: body }, 32000);
+      if (!r.ok) throw new Error("overpass " + r.status);
+      const j = await r.json();
+      if (!j || !Array.isArray(j.elements)) throw new Error("overpass bad");
+      return j;
+    } catch (e) {
+      if (i < DD_OVERPASS_EPS.length - 1 && onFallback) onFallback(i + 1);
+    }
+  }
+  throw ddMapFail();
 }
 function ddSvgUrl(svg) { return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg); }
 function ddHeritageUrl() {
@@ -195,12 +235,12 @@ function ddBuildSvg(data, lat0, lon0) {
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">\n' + parts.join("\n") + "\n</svg>";
 }
 
-async function ddMakeDenah(input) {
+async function ddMakeDenah(input, onFallback) {
   if (/heritage/i.test(input)) return ddHeritageUrl();
   let coords = ddCoordsFromLink(input);
   if (!coords) coords = await ddGeocode(ddQueryFromInput(input));
   if (ddDistM(coords, HERITAGE_LL) < 100) return ddHeritageUrl();
-  const data = await ddOverpass(coords.lat, coords.lon);
+  const data = await ddOverpass(coords.lat, coords.lon, onFallback);
   return ddSvgUrl(ddBuildSvg(data, coords.lat, coords.lon));
 }
 
@@ -306,12 +346,14 @@ async function ddGenerate() {
     go.disabled = true; go.textContent = "Membuat…";
     ddShowStatus("Sedang mencari lokasi dan menggambar denah dari peta sekitar venue…");
     try {
-      denahUrl = await ddMakeDenah(input);
+      denahUrl = await ddMakeDenah(input, () => ddShowStatus("Server peta pertama tidak merespons — mencoba server peta cadangan…"));
     } catch (e) {
       ddBusy = false; go.disabled = false; go.textContent = "Hasilkan"; ddShowStatus("");
       ddShowErr(e && e.notfound
         ? "Alamat itu tidak ditemukan di peta. Coba tulis nama tempat + daerahnya, mis. “Heritage Garden Venue, Setu, Cipayung”."
-        : "Tidak bisa memuat peta, periksa internet lalu coba lagi.");
+        : e && e.mapfail
+          ? "Server peta sedang tidak bisa dihubungi — sudah dicoba beberapa server dan semuanya gagal merespons. Tunggu sebentar, lalu tekan Hasilkan lagi. Kalau tetap gagal, periksa internet."
+          : "Tidak bisa memuat peta, periksa internet lalu coba lagi.");
       return;
     }
     ddBusy = false; go.disabled = false; go.textContent = "Hasilkan"; ddShowStatus("");

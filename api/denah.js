@@ -150,6 +150,10 @@ const MAIN_CLS = new Set(["motorway", "primary", "secondary", "tertiary", "trunk
 const C_BG = "#F2F2F5", C_EDGE = "#5A3A22", C_MAIN = "#6E4A2F";
 const C_LABEL = "#5C3D1E", C_ICON = "#6B4A2F", C_RED = "#C0392B", C_FRAME = "#6E4A2F";
 const C_BLD_FILL = "#FFFFFF", C_BLD_STROKE = "#6E4A2F", C_VENUE_BLD_FILL = "#EFE3CE";
+const C_HOUSE_FILL = "#ECECF1", C_HOUSE_STROKE = "#8A6A4A";
+// Setting poligon: total maks 500, gedung besar maks 60; rumah hanya yang
+// terdekat dengan venue (diurutkan jarak), bukan seluruh peta.
+const POLY_MAX = 500, LARGE_MAX = 60;
 
 function toVh(mx, my, half) {
   return [VB / 2 + (mx * VB) / (2 * half), VB / 2 - (my * VB) / (2 * half)];
@@ -236,18 +240,24 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half) {
     let area = 0;
     for (let i = 0; i < pts.length - 1; i++) area += pts[i][0] * pts[i + 1][1] - pts[i + 1][0] * pts[i][1];
     area = Math.abs(area) / 2;
-    if (area < 400) continue;
+    if (area < 60) continue;
     const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
     const cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
     buildings.push({ pts: simplify(pts, 3), area, dist: Math.hypot(cx, cy) });
   }
   buildings.sort((a, b) => b.area - a.area);
-  buildings.length = Math.min(buildings.length, 60);
+  const large = buildings.filter((b) => b.area >= 400).slice(0, LARGE_MAX);
+  const houses = buildings.filter((b) => b.area >= 60 && b.area < 400)
+    .sort((a, b) => a.dist - b.dist)
+    .slice(0, Math.max(0, POLY_MAX - large.length));
   let venueBld = null;
-  if (buildings.length) {
-    const near = buildings.reduce((a, b) => (b.dist < a.dist ? b : a));
+  const cands = [...large, ...houses];
+  if (cands.length) {
+    const near = cands.reduce((a, b) => (b.dist < a.dist ? b : a));
     if (near.dist < 60) venueBld = near;
   }
+  const drawList = [...houses.filter((b) => b !== venueBld), ...large.filter((b) => b !== venueBld)];
+  if (venueBld) drawList.push(venueBld);
 
   // Geometri bubble venue (dihitung duluan supaya label menghindarinya)
   let bubble = null;
@@ -267,12 +277,14 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half) {
   }).join(" L");
 
   const P = [`<rect x="0" y="0" width="${VB}" height="${VB}" fill="${C_BG}"/>`];
-  for (const b of buildings) {
+  for (const b of drawList) {
     const vpts = b.pts.map(([mx, my]) => toVh(mx, my, half));
     const ptsS = vpts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-    const fill = b === venueBld ? C_VENUE_BLD_FILL : C_BLD_FILL;
-    const sw = b === venueBld ? "0.7" : "0.5";
-    P.push(`<polygon points="${ptsS}" fill="${fill}" stroke="${C_BLD_STROKE}" stroke-width="${sw}" stroke-linejoin="round"/>`);
+    let fill, stroke, sw;
+    if (b === venueBld) { fill = C_VENUE_BLD_FILL; stroke = C_BLD_STROKE; sw = "0.7"; }
+    else if (b.area >= 400) { fill = C_BLD_FILL; stroke = C_BLD_STROKE; sw = "0.5"; }
+    else { fill = C_HOUSE_FILL; stroke = C_HOUSE_STROKE; sw = "0.3"; }
+    P.push(`<polygon points="${ptsS}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>`);
   }
   for (const r of roads) {
     if (MAIN_CLS.has(r.cls)) continue;

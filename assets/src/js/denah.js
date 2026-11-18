@@ -83,10 +83,11 @@ const DD_OVERPASS_EPS = [
 async function ddOverpass(lat, lon, onProgress) {
   /* Query dibuat seringan mungkin: radius diperkecil (470→320 m, denah tetap
      terisi di tengah). Klausa way["building"] kini diambil lagi untuk
-     poligon blok bangunan gaya v3 — dulu klausa itu dibuang karena membuat
-     respons membengkak, tetapi radius 320 m menahannya tetap ringan, dan
-     generator hanya menggambar bangunan >= 400 m2. Patokan dari bangunan
-     bernama tetap tertangkap lewat klausa amenity di bawah.
+     poligon bangunan — dulu klausa itu dibuang karena membuat respons
+     membengkak, tetapi radius 320 m menahannya tetap ringan, dan
+     generator menggambar bangunan >= 60 m2 (gedung besar maks 60, rumah
+     terdekat maks total 500 poligon). Patokan dari bangunan bernama
+     tetap tertangkap lewat klausa amenity di bawah.
      Jenis amenity diperluas (tempat makan, SPBU, polisi, rumah sakit,
      kantor/bank) + node toko, supaya ikon patokan gaya baru bisa digambar;
      semuanya node/way ringan, bukan geometri bangunan massal.
@@ -157,26 +158,34 @@ async function ddTryApiDenah(input) {
   } catch (e) { return null; }
 }
 
-/* ---- Pembuat SVG denah v3 — gaya contoh undangan (Awa Mangkuruku) ----
-   Port dari buildDenahSvg v3 di api/denah.js (server), yang setara dengan
+/* ---- Pembuat SVG denah — gaya contoh undangan (Awa Mangkuruku) ----
+   Port dari buildDenahSvg di api/denah.js (server), yang setara dengan
    generator Python untuk SVG bundel: latar abu sangat muda #F2F2F5,
-   poligon bangunan/blok putih #FFFFFF bertepi coklat #6E4A2F (hanya yang
-   >= 400 m2, maks 60 terbesar; gedung venue — bangunan terdekat < 60 m —
-   isi sorot #EFE3CE), jalan coklat #6E4A2F bertepi #5A3A22 (jalan utama
-   lebar 7/6, jalan kecil 4.5), SEMUA jalan berlabel PUTIH TEBAL di atas
-   badan jalan (ukuran 6 jalan utama / 5 jalan kecil) mengikuti arah
-   jalan (dijepit di dalam kanvas dan tidak menutupi bubble venue),
-   patokan maks 6 terdekat berikon coklat #6B4A2F sesuai jenis dengan
-   label anti-tabrakan, POI dalam 30 m dari venue tidak digambar (itu
-   venue itu sendiri), venue = pin merah #C0392B + bubble nama merah,
-   panah satu arah di jalan besar bertanda oneway, panah utara "U"
-   kanan atas, bingkai coklat #6E4A2F.
+   poligon bangunan >= 60 m2 — gedung besar (>= 400 m2, maks LARGE_MAX,
+   luas menurun) isi putih #FFFFFF bertepi coklat #6E4A2F 0.5; rumah
+   (60–<400 m2) hanya yang terdekat dengan venue (jarak naik, sebanyak
+   sisa kuota POLY_MAX) isi #ECECF1 bertepi #8A6A4A 0.3; gedung venue —
+   bangunan terdekat < 60 m dari gabungan keduanya — isi sorot #EFE3CE
+   bertepi #6E4A2F 0.7 dan digambar paling akhir; urutan gambar: rumah
+   → gedung besar → gedung venue — jalan coklat #6E4A2F bertepi #5A3A22
+   (jalan utama lebar 7/6, jalan kecil 4.5), SEMUA jalan berlabel PUTIH
+   TEBAL di atas badan jalan (ukuran 6 jalan utama / 5 jalan kecil)
+   mengikuti arah jalan (dijepit di dalam kanvas dan tidak menutupi
+   bubble venue), patokan maks 6 terdekat berikon coklat #6B4A2F sesuai
+   jenis dengan label anti-tabrakan, POI dalam 30 m dari venue tidak
+   digambar (itu venue itu sendiri), venue = pin merah #C0392B + bubble
+   nama merah, panah satu arah di jalan besar bertanda oneway, panah
+   utara "U" kanan atas, bingkai coklat #6E4A2F.
    Bedanya dari versi server hanya format data masuk: di sini data
    Overpass (way ber-geometry, node ber-lat/lon), bukan OSM API. */
 const DD_MAIN_CLS = { motorway: 1, primary: 1, secondary: 1, tertiary: 1, trunk: 1 };
 const DD_C_BG = "#F2F2F5", DD_C_EDGE = "#5A3A22", DD_C_MAIN = "#6E4A2F";
 const DD_C_LABEL = "#5C3D1E", DD_C_ICON = "#6B4A2F", DD_C_RED = "#C0392B", DD_C_FRAME = "#6E4A2F";
 const DD_C_BLD_FILL = "#FFFFFF", DD_C_BLD_STROKE = "#6E4A2F", DD_C_VENUE_BLD_FILL = "#EFE3CE";
+const DD_C_HOUSE_FILL = "#ECECF1", DD_C_HOUSE_STROKE = "#8A6A4A";
+/* Setting poligon: total maks 500, gedung besar maks 60; rumah hanya yang
+   terdekat dengan venue (diurutkan jarak), bukan seluruh peta. */
+const POLY_MAX = 500, LARGE_MAX = 60;
 
 function ddDispName(name) {
   const n = name.trim();
@@ -264,8 +273,9 @@ function ddBuildSvg(data, lat0, lon0, roadLabelOverride, venueName) {
   });
   if (!roads.length) return null;
 
-  /* Poligon bangunan (footprint OSM): hanya yang besar supaya blok terbaca,
-     bukan ratusan rumah kecil. Gedung venue diberi isi warna sorot. */
+  /* Poligon bangunan (footprint OSM): gedung besar + rumah di sekitar
+     venue supaya blok terbaca dan denah tidak polos. Gedung venue diberi
+     isi warna sorot. */
   const buildings = [];
   (data.elements || []).forEach(e => {
     const t = e.tags || {};
@@ -277,19 +287,25 @@ function ddBuildSvg(data, lat0, lon0, roadLabelOverride, venueName) {
     let area = 0;
     for (let i = 0; i < pts.length - 1; i++) area += pts[i][0] * pts[i + 1][1] - pts[i + 1][0] * pts[i][1];
     area = Math.abs(area) / 2;
-    if (area < 400) return;
+    if (area < 60) return;
     let cx = 0, cy = 0;
     pts.forEach(p => { cx += p[0]; cy += p[1]; });
     cx /= pts.length; cy /= pts.length;
     buildings.push({ pts: simplify(pts, 3), area: area, dist: Math.hypot(cx, cy) });
   });
   buildings.sort((a, b) => b.area - a.area);
-  if (buildings.length > 60) buildings.length = 60;
+  const large = buildings.filter(b => b.area >= 400).slice(0, LARGE_MAX);
+  const houses = buildings.filter(b => b.area >= 60 && b.area < 400)
+    .sort((a, b) => a.dist - b.dist)
+    .slice(0, Math.max(0, POLY_MAX - large.length));
   let venueBld = null;
-  if (buildings.length) {
-    const near = buildings.reduce((a, b) => (b.dist < a.dist ? b : a));
+  const cands = large.concat(houses);
+  if (cands.length) {
+    const near = cands.reduce((a, b) => (b.dist < a.dist ? b : a));
     if (near.dist < 60) venueBld = near;
   }
+  const drawList = houses.filter(b => b !== venueBld).concat(large.filter(b => b !== venueBld));
+  if (venueBld) drawList.push(venueBld);
 
   /* Geometri bubble venue (dihitung duluan supaya label jalan menghindarinya) */
   let bubble = null;
@@ -306,11 +322,13 @@ function ddBuildSvg(data, lat0, lon0, roadLabelOverride, venueName) {
   const pathD = mpts => "M" + mpts.map(p => { const v = toVh(p[0], p[1]); return F(v[0]) + "," + F(v[1]); }).join(" L");
 
   const P = ['<rect x="0" y="0" width="' + VB + '" height="' + VB + '" fill="' + DD_C_BG + '"/>'];
-  buildings.forEach(b => {
+  drawList.forEach(b => {
     const ptsS = b.pts.map(p => { const v = toVh(p[0], p[1]); return F(v[0]) + "," + F(v[1]); }).join(" ");
-    const fill = b === venueBld ? DD_C_VENUE_BLD_FILL : DD_C_BLD_FILL;
-    const sw = b === venueBld ? "0.7" : "0.5";
-    P.push('<polygon points="' + ptsS + '" fill="' + fill + '" stroke="' + DD_C_BLD_STROKE + '" stroke-width="' + sw + '" stroke-linejoin="round"/>');
+    let fill, stroke, sw;
+    if (b === venueBld) { fill = DD_C_VENUE_BLD_FILL; stroke = DD_C_BLD_STROKE; sw = "0.7"; }
+    else if (b.area >= 400) { fill = DD_C_BLD_FILL; stroke = DD_C_BLD_STROKE; sw = "0.5"; }
+    else { fill = DD_C_HOUSE_FILL; stroke = DD_C_HOUSE_STROKE; sw = "0.3"; }
+    P.push('<polygon points="' + ptsS + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '" stroke-linejoin="round"/>');
   });
   roads.forEach(r => {
     if (DD_MAIN_CLS[r.cls]) return;

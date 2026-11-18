@@ -196,8 +196,11 @@ function wrap2(name, maxlen) {
 }
 function textW(s, size) { return s.length * size * 0.75; }
 
-function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half) {
+function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half, scale) {
   half = half || HALF;
+  scale = scale || 1;
+  // Format angka skala bersih (3.2, 6.25, 0.6, 0.9375) tanpa sisa floating-point.
+  const fmt = (n) => String(parseFloat(n.toFixed(4)));
   const nodes = new Map();
   for (const e of data.elements || []) {
     if (e.type === "node") nodes.set(e.id, [e.lat, e.lon]);
@@ -316,7 +319,7 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half) {
 
   function labelAlong(name, mpts, cls) {
     // Label jalan PUTIH TEBAL di atas badan jalan (seperti contoh).
-    const size = MAIN_CLS.has(cls) ? 5 : 4;
+    const size = (MAIN_CLS.has(cls) ? 5 : 4) * scale;
     const cands = segCandidates(mpts);
     if (!cands.length || cands[0][0] < 12) return ["", null];
     // Nama jalan di OSM kadang pendek ("Cifor"); bila alamat/URL menyebut
@@ -341,7 +344,7 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half) {
     }
     if (!chosen) return ["", null];
     const [mx, my, ang, hext, vext, box] = chosen;
-    const svg = `<text x="${mx.toFixed(1)}" y="${my.toFixed(1)}" text-anchor="middle" transform="rotate(${ang.toFixed(1)} ${mx.toFixed(1)} ${my.toFixed(1)})" font-family="Verdana, DejaVu Sans, sans-serif" font-size="${size}" font-weight="bold" fill="white">${esc(txt)}</text>`;
+    const svg = `<text x="${mx.toFixed(1)}" y="${my.toFixed(1)}" text-anchor="middle" transform="rotate(${ang.toFixed(1)} ${mx.toFixed(1)} ${my.toFixed(1)})" font-family="Verdana, DejaVu Sans, sans-serif" font-size="${fmt(size)}" font-weight="bold" fill="white">${esc(txt)}</text>`;
     const cx = (box[0] + box[2]) / 2, cy = (box[1] + box[3]) / 2;
     const cbox = [cx - (box[2] - box[0]) * 0.35, cy - (box[3] - box[1]) * 0.35,
                   cx + (box[2] - box[0]) * 0.35, cy + (box[3] - box[1]) * 0.35];
@@ -463,7 +466,7 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half) {
     const [x, y] = toVh(p.mx, p.my, half);
     if (iconsDrawn.some(([ix, iy]) => Math.hypot(x - ix, y - iy) < 20)) continue;
     iconsDrawn.push([x, y]);
-    P.push(`<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(0.75) translate(${(-x).toFixed(1)} ${(-y).toFixed(1)})">${ICONS[p.kind](x, y)}</g>`);
+    P.push(`<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${fmt(0.75 * scale)}) translate(${(-x).toFixed(1)} ${(-y).toFixed(1)})">${ICONS[p.kind](x, y)}</g>`);
     placedPois.push([p, x, y]);
     boxes.push([x - 10, y - 14, x + 10, y + 8]);
   }
@@ -483,7 +486,7 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half) {
       if (overlaps(b)) continue;
       boxes.push(b);
       for (let i = 0; i < lines.length; i++) {
-        P.push(`<text x="${lx.toFixed(1)}" y="${(ly + i * 8).toFixed(1)}" text-anchor="${anchor}" font-family="Verdana, DejaVu Sans, sans-serif" font-size="4" fill="${C_LABEL}">${esc(lines[i])}</text>`);
+        P.push(`<text x="${lx.toFixed(1)}" y="${(ly + i * 8).toFixed(1)}" text-anchor="${anchor}" font-family="Verdana, DejaVu Sans, sans-serif" font-size="${fmt(4 * scale)}" fill="${C_LABEL}">${esc(lines[i])}</text>`);
       }
       break;
     }
@@ -559,13 +562,15 @@ module.exports = async (req, res) => {
 
     // Jangkauan denah dari query (?radius=), default 350 m, dibatasi 100–1000 m.
     const radius = Math.min(1000, Math.max(100, parseInt(q.radius || "350", 10) || 350));
+    // Skala teks & ikon denah dari query (?scale=), default 1, dibatasi 0,5–2.
+    const scale = Math.min(2, Math.max(0.5, parseFloat(q.scale || "1") || 1));
     const data = await fetchOsmBbox(lat, lon, radius);
     if (!data) { res.status(502).json({ error: "mapfail" }); return; }
     // Nama jalan lengkap dari alamat/URL, mis. "Jl. Raya Cifor".
     const srcText = nameSource;
     const rm = srcText.match(/Jl\.\s*[A-Za-z]+(?:\s+[A-Za-z]+)*?(?=\s+No\.|\s*,|\s*$)/);
     const venueName = (nameSource.split(",")[0] || "").trim() || null;
-    const svg = buildDenahSvg(lat, lon, data, rm ? rm[0].trim() : null, venueName, radius);
+    const svg = buildDenahSvg(lat, lon, data, rm ? rm[0].trim() : null, venueName, radius, scale);
     if (!svg) { res.status(502).json({ error: "mapfail" }); return; }
 
     res.setHeader("Content-Type", "image/svg+xml; charset=utf-8");

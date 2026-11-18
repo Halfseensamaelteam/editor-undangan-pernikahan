@@ -82,10 +82,11 @@ const DD_OVERPASS_EPS = [
 ];
 async function ddOverpass(lat, lon, onProgress) {
   /* Query dibuat seringan mungkin: radius diperkecil (470→320 m, denah tetap
-     terisi di tengah) dan klausa way["building"] dibuang — klausa itu menarik
-     geometri semua bangunan bernama dan membuat respons membengkak (±139 KB,
-     ±35 dtk), yang selalu timeout di koneksi HP yang lambat. Patokan dari
-     bangunan bernama tetap tertangkap lewat klausa amenity di bawah.
+     terisi di tengah). Klausa way["building"] kini diambil lagi untuk
+     poligon blok bangunan gaya v3 — dulu klausa itu dibuang karena membuat
+     respons membengkak, tetapi radius 320 m menahannya tetap ringan, dan
+     generator hanya menggambar bangunan >= 400 m2. Patokan dari bangunan
+     bernama tetap tertangkap lewat klausa amenity di bawah.
      Jenis amenity diperluas (tempat makan, SPBU, polisi, rumah sakit,
      kantor/bank) + node toko, supaya ikon patokan gaya baru bisa digambar;
      semuanya node/way ringan, bukan geometri bangunan massal.
@@ -93,7 +94,7 @@ async function ddOverpass(lat, lon, onProgress) {
      memang lambat merespons; status dialog menunjukkan server ke berapa yang
      sedang dicoba supaya pengguna tahu prosesnya masih berjalan. */
   const DD_AMEN = "place_of_worship|school|restaurant|fast_food|cafe|fuel|police|hospital|clinic|doctors|townhall|courthouse|bank";
-  const q = '[out:json][timeout:55];(way["highway"]["name"](around:320,' + lat + "," + lon + ');way["amenity"~"' + DD_AMEN + '"](around:320,' + lat + "," + lon + ');node["amenity"~"' + DD_AMEN + '"](around:320,' + lat + "," + lon + ');node["shop"~"convenience|supermarket|mall|department_store"](around:320,' + lat + "," + lon + '););out geom;';
+  const q = '[out:json][timeout:55];(way["highway"]["name"](around:320,' + lat + "," + lon + ');way["building"](around:320,' + lat + "," + lon + ');way["amenity"~"' + DD_AMEN + '"](around:320,' + lat + "," + lon + ');node["amenity"~"' + DD_AMEN + '"](around:320,' + lat + "," + lon + ');node["shop"~"convenience|supermarket|mall|department_store"](around:320,' + lat + "," + lon + '););out geom;';
   const body = "data=" + encodeURIComponent(q);
   for (let i = 0; i < DD_OVERPASS_EPS.length; i++) {
     if (onProgress) onProgress(i + 1, DD_OVERPASS_EPS.length);
@@ -156,22 +157,26 @@ async function ddTryApiDenah(input) {
   } catch (e) { return null; }
 }
 
-/* ---- Pembuat SVG denah — gaya contoh undangan (Awa Mangkuruku) ----
-   Port dari buildDenahSvg di api/denah.js (server), yang setara dengan
-   generator Python make_denah_v2.py untuk SVG bundel: latar krem #F8F4EB,
-   jalan besar coklat #8B5A2B bertepi lebih gelap #6E4520 (lebar 5.5/4.5),
-   jalan kecil coklat muda #B08D5F lebar 2.2, SEMUA jalan berlabel coklat
-   gelap #5C3D1E ukuran 7 mengikuti arah jalan (dijepit di dalam kanvas
-   dan tidak menutupi bubble venue), patokan maks 6 terdekat berikon
-   coklat #6B4A2F sesuai jenis dengan label anti-tabrakan, POI dalam
-   30 m dari venue tidak digambar (itu venue itu sendiri), venue = pin
-   merah #C0392B + bubble nama merah, panah satu arah putih di jalan
-   besar bertanda oneway, panah utara "U" kanan atas, bingkai coklat.
+/* ---- Pembuat SVG denah v3 — gaya contoh undangan (Awa Mangkuruku) ----
+   Port dari buildDenahSvg v3 di api/denah.js (server), yang setara dengan
+   generator Python untuk SVG bundel: latar abu sangat muda #F2F2F5,
+   poligon bangunan/blok putih #FFFFFF bertepi coklat #6E4A2F (hanya yang
+   >= 400 m2, maks 60 terbesar; gedung venue — bangunan terdekat < 60 m —
+   isi sorot #EFE3CE), jalan coklat #6E4A2F bertepi #5A3A22 (jalan utama
+   lebar 7/6, jalan kecil 4.5), SEMUA jalan berlabel PUTIH TEBAL di atas
+   badan jalan (ukuran 6 jalan utama / 5 jalan kecil) mengikuti arah
+   jalan (dijepit di dalam kanvas dan tidak menutupi bubble venue),
+   patokan maks 6 terdekat berikon coklat #6B4A2F sesuai jenis dengan
+   label anti-tabrakan, POI dalam 30 m dari venue tidak digambar (itu
+   venue itu sendiri), venue = pin merah #C0392B + bubble nama merah,
+   panah satu arah di jalan besar bertanda oneway, panah utara "U"
+   kanan atas, bingkai coklat #6E4A2F.
    Bedanya dari versi server hanya format data masuk: di sini data
    Overpass (way ber-geometry, node ber-lat/lon), bukan OSM API. */
 const DD_MAIN_CLS = { motorway: 1, primary: 1, secondary: 1, tertiary: 1, trunk: 1 };
-const DD_C_BG = "#F8F4EB", DD_C_EDGE = "#6E4520", DD_C_MAIN = "#8B5A2B", DD_C_MINOR = "#B08D5F";
-const DD_C_LABEL = "#5C3D1E", DD_C_ICON = "#6B4A2F", DD_C_RED = "#C0392B", DD_C_FRAME = "#8B5A2B";
+const DD_C_BG = "#F2F2F5", DD_C_EDGE = "#5A3A22", DD_C_MAIN = "#6E4A2F";
+const DD_C_LABEL = "#5C3D1E", DD_C_ICON = "#6B4A2F", DD_C_RED = "#C0392B", DD_C_FRAME = "#6E4A2F";
+const DD_C_BLD_FILL = "#FFFFFF", DD_C_BLD_STROKE = "#6E4A2F", DD_C_VENUE_BLD_FILL = "#EFE3CE";
 
 function ddDispName(name) {
   const n = name.trim();
@@ -207,7 +212,7 @@ function ddWrap2(name, maxlen) {
   if (l2.length > maxlen + 6) l2 = l2.slice(0, maxlen + 3) + "…";
   return [words.slice(0, best).join(" "), l2];
 }
-function ddTextW(s, size) { return s.length * size * 0.72; }
+function ddTextW(s, size) { return s.length * size * 0.75; }
 function ddClassifyPoi(t) {
   const am = t.amenity || "";
   if (am === "place_of_worship") {
@@ -259,6 +264,33 @@ function ddBuildSvg(data, lat0, lon0, roadLabelOverride, venueName) {
   });
   if (!roads.length) return null;
 
+  /* Poligon bangunan (footprint OSM): hanya yang besar supaya blok terbaca,
+     bukan ratusan rumah kecil. Gedung venue diberi isi warna sorot. */
+  const buildings = [];
+  (data.elements || []).forEach(e => {
+    const t = e.tags || {};
+    if (e.type !== "way" || !("building" in t) || !e.geometry) return;
+    if (e.geometry.length < 4) return;
+    const pts = [];
+    e.geometry.forEach(g => { const p = proj(g.lat, g.lon); if (Math.abs(p[0]) <= HALF * 1.15 && Math.abs(p[1]) <= HALF * 1.15) pts.push(p); });
+    if (pts.length < 4) return;
+    let area = 0;
+    for (let i = 0; i < pts.length - 1; i++) area += pts[i][0] * pts[i + 1][1] - pts[i + 1][0] * pts[i][1];
+    area = Math.abs(area) / 2;
+    if (area < 400) return;
+    let cx = 0, cy = 0;
+    pts.forEach(p => { cx += p[0]; cy += p[1]; });
+    cx /= pts.length; cy /= pts.length;
+    buildings.push({ pts: simplify(pts, 3), area: area, dist: Math.hypot(cx, cy) });
+  });
+  buildings.sort((a, b) => b.area - a.area);
+  if (buildings.length > 60) buildings.length = 60;
+  let venueBld = null;
+  if (buildings.length) {
+    const near = buildings.reduce((a, b) => (b.dist < a.dist ? b : a));
+    if (near.dist < 60) venueBld = near;
+  }
+
   /* Geometri bubble venue (dihitung duluan supaya label jalan menghindarinya) */
   let bubble = null;
   if (venueName) {
@@ -274,13 +306,19 @@ function ddBuildSvg(data, lat0, lon0, roadLabelOverride, venueName) {
   const pathD = mpts => "M" + mpts.map(p => { const v = toVh(p[0], p[1]); return F(v[0]) + "," + F(v[1]); }).join(" L");
 
   const P = ['<rect x="0" y="0" width="' + VB + '" height="' + VB + '" fill="' + DD_C_BG + '"/>'];
+  buildings.forEach(b => {
+    const ptsS = b.pts.map(p => { const v = toVh(p[0], p[1]); return F(v[0]) + "," + F(v[1]); }).join(" ");
+    const fill = b === venueBld ? DD_C_VENUE_BLD_FILL : DD_C_BLD_FILL;
+    const sw = b === venueBld ? "0.7" : "0.5";
+    P.push('<polygon points="' + ptsS + '" fill="' + fill + '" stroke="' + DD_C_BLD_STROKE + '" stroke-width="' + sw + '" stroke-linejoin="round"/>');
+  });
   roads.forEach(r => {
     if (DD_MAIN_CLS[r.cls]) return;
-    P.push('<path d="' + pathD(r.pts) + '" fill="none" stroke="' + DD_C_MINOR + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>');
+    P.push('<path d="' + pathD(r.pts) + '" fill="none" stroke="' + DD_C_MAIN + '" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>');
   });
   roads.forEach(r => {
     if (!DD_MAIN_CLS[r.cls]) return;
-    const w = (r.cls === "motorway" || r.cls === "primary" || r.cls === "secondary" || r.cls === "trunk") ? 5.5 : 4.5;
+    const w = (r.cls === "motorway" || r.cls === "primary" || r.cls === "secondary" || r.cls === "trunk") ? 7 : 6;
     const d = pathD(r.pts);
     P.push('<path d="' + d + '" fill="none" stroke="' + DD_C_EDGE + '" stroke-width="' + F(w + 1.6) + '" stroke-linecap="round" stroke-linejoin="round"/>');
     P.push('<path d="' + d + '" fill="none" stroke="' + DD_C_MAIN + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round"/>');
@@ -300,7 +338,9 @@ function ddBuildSvg(data, lat0, lon0, roadLabelOverride, venueName) {
     return cands;
   }
 
-  function labelAlong(name, mpts, size) {
+  function labelAlong(name, mpts, cls) {
+    /* Label jalan PUTIH TEBAL di atas badan jalan (seperti contoh). */
+    const size = DD_MAIN_CLS[cls] ? 6 : 5;
     const cands = segCandidates(mpts);
     if (!cands.length || cands[0][0] < 12) return ["", null];
     /* Nama jalan di OSM kadang pendek ("Cifor"); bila alamat/URL menyebut
@@ -325,7 +365,7 @@ function ddBuildSvg(data, lat0, lon0, roadLabelOverride, venueName) {
     }
     if (!chosen) return ["", null];
     const mx = chosen[0], my = chosen[1], ang = chosen[2], box = chosen[3];
-    const svg = '<text x="' + F(mx) + '" y="' + F(my) + '" text-anchor="middle" transform="rotate(' + F(ang) + " " + F(mx) + " " + F(my) + ')" font-family="Verdana, DejaVu Sans, sans-serif" font-size="' + size + '" fill="' + DD_C_LABEL + '">' + ddEsc(txt) + "</text>";
+    const svg = '<text x="' + F(mx) + '" y="' + F(my) + '" text-anchor="middle" transform="rotate(' + F(ang) + " " + F(mx) + " " + F(my) + ')" font-family="Verdana, DejaVu Sans, sans-serif" font-size="' + size + '" font-weight="bold" fill="white">' + ddEsc(txt) + "</text>";
     const cx = (box[0] + box[2]) / 2, cy = (box[1] + box[3]) / 2;
     const cbox = [cx - (box[2] - box[0]) * 0.35, cy - (box[3] - box[1]) * 0.35, cx + (box[2] - box[0]) * 0.35, cy + (box[3] - box[1]) * 0.35];
     return [svg, cbox];
@@ -337,11 +377,11 @@ function ddBuildSvg(data, lat0, lon0, roadLabelOverride, venueName) {
     const vpts = r.pts.map(p => toVh(p[0], p[1]));
     let bl = 0;
     for (let i = 0; i < vpts.length - 1; i++) { const ln = Math.hypot(vpts[i + 1][0] - vpts[i][0], vpts[i + 1][1] - vpts[i][1]); if (ln > bl) bl = ln; }
-    if (!bestLabel.has(r.name) || bl > bestLabel.get(r.name)[0]) bestLabel.set(r.name, [bl, r.pts]);
+    if (!bestLabel.has(r.name) || bl > bestLabel.get(r.name)[0]) bestLabel.set(r.name, [bl, r.pts, r.cls]);
   });
   const roadBoxes = [];
   bestLabel.forEach((v, name) => {
-    const res = labelAlong(name, v[1], 7);
+    const res = labelAlong(name, v[1], v[2]);
     if (res[0]) P.push(res[0]);
     if (res[1]) roadBoxes.push(res[1]);
   });

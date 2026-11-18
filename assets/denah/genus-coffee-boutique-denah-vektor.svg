@@ -1,12 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">
-<rect x="0" y="0" width="240" height="240" fill="#F8F4EB"/>
-<path d="M241.6,134.2 L233.5,103.6 L210.5,106.5 L207.5,82.8" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M122.0,116.0 L184.8,252.7" fill="none" stroke="#6E4520" stroke-width="6.1" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M122.0,116.0 L184.8,252.7" fill="none" stroke="#8B5A2B" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M134.7,-7.4 L120.8,20.4 L109.6,57.8 L113.1,91.7 L122.0,116.0" fill="none" stroke="#6E4520" stroke-width="6.1" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M134.7,-7.4 L120.8,20.4 L109.6,57.8 L113.1,91.7 L122.0,116.0" fill="none" stroke="#8B5A2B" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="153.4" y="184.4" text-anchor="middle" transform="rotate(65.3 153.4 184.4)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Jl. Cifor</text>
-<text x="209.0" y="94.6" text-anchor="middle" transform="rotate(82.7 209.0 94.6)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Jl. Tawekal</text>
+<rect x="0" y="0" width="240" height="240" fill="#F2F2F5"/>
+<polygon points="126.6,34.4 142.4,35.6 142.8,40.9 135.1,40.7 137.5,55.8 132.8,56.5 130.2,40.6 128.6,40.6 128.7,37.6 126.5,37.5 126.6,34.4" fill="#FFFFFF" stroke="#6E4A2F" stroke-width="0.5" stroke-linejoin="round"/>
+<polygon points="196.8,241.1 191.4,251.2 186.8,242.7 189.0,240.0 186.4,238.2 188.6,235.2 196.8,241.1" fill="#FFFFFF" stroke="#6E4A2F" stroke-width="0.5" stroke-linejoin="round"/>
+<polygon points="77.2,72.9 74.0,74.0 72.9,70.7 80.6,68.1 81.8,71.3 80.3,71.8 82.8,78.9 79.7,79.9 77.2,72.9" fill="#FFFFFF" stroke="#6E4A2F" stroke-width="0.5" stroke-linejoin="round"/>
+<polygon points="133.7,187.7 139.1,186.2 141.7,195.1 136.4,196.7 133.7,187.7" fill="#FFFFFF" stroke="#6E4A2F" stroke-width="0.5" stroke-linejoin="round"/>
+<polygon points="179.7,163.8 182.8,163.2 181.7,156.4 183.4,156.2 180.7,150.1 177.3,150.6 179.7,163.8" fill="#FFFFFF" stroke="#6E4A2F" stroke-width="0.5" stroke-linejoin="round"/>
+<path d="M241.6,134.2 L233.5,103.6 L210.5,106.5 L207.5,82.8" fill="none" stroke="#6E4A2F" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M122.0,116.0 L184.8,252.7" fill="none" stroke="#5A3A22" stroke-width="7.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M122.0,116.0 L184.8,252.7" fill="none" stroke="#6E4A2F" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M134.7,-7.4 L120.8,20.4 L109.6,57.8 L113.1,91.7 L122.0,116.0" fill="none" stroke="#5A3A22" stroke-width="7.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M134.7,-7.4 L120.8,20.4 L109.6,57.8 L113.1,91.7 L122.0,116.0" fill="none" stroke="#6E4A2F" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="153.4" y="184.4" text-anchor="middle" transform="rotate(65.3 153.4 184.4)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="6" font-weight="bold" fill="white">Jl. Raya Cifor</text>
+<text x="209.0" y="94.6" text-anchor="middle" transform="rotate(82.7 209.0 94.6)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="5" font-weight="bold" fill="white">Jl. Tawekal</text>
 <g stroke="#6B4A2F" stroke-width="1.6" fill="none"><circle cx="118.7" cy="91.0" r="7.5"/><path d="M115.7 87.0 V94.0 M114.2 87.0 V91.0 M117.2 87.0 V91.0"/><path d="M121.7 87.0 L123.2 94.0"/></g>
 <g fill="#6B4A2F"><circle cx="157.8" cy="113.7" r="6.5"/><rect x="151.3" y="113.7" width="13" height="4"/><rect x="156.3" y="104.7" width="3" height="9"/><circle cx="157.8" cy="103.7" r="2.5"/></g>
 <g fill="#6B4A2F"><circle cx="136.5" cy="70.8" r="6.5"/><rect x="130.0" y="70.8" width="13" height="4"/><rect x="135.0" y="61.8" width="3" height="9"/><circle cx="136.5" cy="60.8" r="2.5"/></g>
@@ -21,5 +26,5 @@
 <text x="134.0" y="96.5" text-anchor="middle" font-family="Verdana, DejaVu Sans, sans-serif" font-size="8" font-weight="bold" fill="white">&amp; Boutique</text>
 <polygon points="115.0,104.0 125.0,104.0 120.0,108.0" fill="#C0392B"/>
 <g><circle cx="222" cy="18" r="10" fill="white" stroke="#5C3D1E" stroke-width="1.2"/><polygon points="222,10 217,21 227,21" fill="#5C3D1E"/><text x="222" y="34" text-anchor="middle" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" font-weight="bold" fill="#5C3D1E">U</text></g>
-<rect x="1" y="1" width="238" height="238" fill="none" stroke="#8B5A2B" stroke-width="2"/>
+<rect x="1" y="1" width="238" height="238" fill="none" stroke="#6E4A2F" stroke-width="2"/>
 </svg>

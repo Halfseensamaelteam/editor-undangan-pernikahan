@@ -147,8 +147,9 @@ function simplify(pts, tol) {
 // venue = pin merah + bubble nama merah. Sama seperti generator Python
 // (make_denah_v2.py) yang dipakai untuk SVG bundel.
 const MAIN_CLS = new Set(["motorway", "primary", "secondary", "tertiary", "trunk"]);
-const C_BG = "#F8F4EB", C_EDGE = "#6E4520", C_MAIN = "#8B5A2B", C_MINOR = "#B08D5F";
-const C_LABEL = "#5C3D1E", C_ICON = "#6B4A2F", C_RED = "#C0392B", C_FRAME = "#8B5A2B";
+const C_BG = "#F2F2F5", C_EDGE = "#5A3A22", C_MAIN = "#6E4A2F";
+const C_LABEL = "#5C3D1E", C_ICON = "#6B4A2F", C_RED = "#C0392B", C_FRAME = "#6E4A2F";
+const C_BLD_FILL = "#FFFFFF", C_BLD_STROKE = "#6E4A2F", C_VENUE_BLD_FILL = "#EFE3CE";
 
 function toVh(mx, my, half) {
   return [VB / 2 + (mx * VB) / (2 * half), VB / 2 - (my * VB) / (2 * half)];
@@ -187,7 +188,7 @@ function wrap2(name, maxlen) {
   if (l2.length > maxlen + 6) l2 = l2.slice(0, maxlen + 3) + "…";
   return [words.slice(0, best).join(" "), l2];
 }
-function textW(s, size) { return s.length * size * 0.72; }
+function textW(s, size) { return s.length * size * 0.75; }
 
 function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half) {
   half = half || HALF;
@@ -216,6 +217,38 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half) {
   }
   if (!roads.length) return null;
 
+  // Poligon bangunan (footprint OSM): hanya yang besar supaya blok terbaca,
+  // bukan ratusan rumah kecil. Gedung venue diberi isi warna sorot.
+  const buildings = [];
+  for (const e of data.elements || []) {
+    const t = e.tags || {};
+    if (e.type !== "way" || !("building" in t)) continue;
+    const nids = e.nodes || [];
+    if (nids.length < 4) continue;
+    const pts = [];
+    for (const nid of nids) {
+      const n = nodes.get(nid);
+      if (!n) continue;
+      const [mx, my] = project(lat0, lon0, n[0], n[1]);
+      if (Math.abs(mx) <= half * 1.15 && Math.abs(my) <= half * 1.15) pts.push([mx, my]);
+    }
+    if (pts.length < 4) continue;
+    let area = 0;
+    for (let i = 0; i < pts.length - 1; i++) area += pts[i][0] * pts[i + 1][1] - pts[i + 1][0] * pts[i][1];
+    area = Math.abs(area) / 2;
+    if (area < 400) continue;
+    const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+    const cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+    buildings.push({ pts: simplify(pts, 3), area, dist: Math.hypot(cx, cy) });
+  }
+  buildings.sort((a, b) => b.area - a.area);
+  buildings.length = Math.min(buildings.length, 60);
+  let venueBld = null;
+  if (buildings.length) {
+    const near = buildings.reduce((a, b) => (b.dist < a.dist ? b : a));
+    if (near.dist < 60) venueBld = near;
+  }
+
   // Geometri bubble venue (dihitung duluan supaya label menghindarinya)
   let bubble = null;
   if (venueName) {
@@ -234,13 +267,20 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half) {
   }).join(" L");
 
   const P = [`<rect x="0" y="0" width="${VB}" height="${VB}" fill="${C_BG}"/>`];
+  for (const b of buildings) {
+    const vpts = b.pts.map(([mx, my]) => toVh(mx, my, half));
+    const ptsS = vpts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+    const fill = b === venueBld ? C_VENUE_BLD_FILL : C_BLD_FILL;
+    const sw = b === venueBld ? "0.7" : "0.5";
+    P.push(`<polygon points="${ptsS}" fill="${fill}" stroke="${C_BLD_STROKE}" stroke-width="${sw}" stroke-linejoin="round"/>`);
+  }
   for (const r of roads) {
     if (MAIN_CLS.has(r.cls)) continue;
-    P.push(`<path d="${pathD(r.pts)}" fill="none" stroke="${C_MINOR}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`);
+    P.push(`<path d="${pathD(r.pts)}" fill="none" stroke="${C_MAIN}" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>`);
   }
   for (const r of roads) {
     if (!MAIN_CLS.has(r.cls)) continue;
-    const w = ["motorway", "primary", "secondary", "trunk"].includes(r.cls) ? 5.5 : 4.5;
+    const w = ["motorway", "primary", "secondary", "trunk"].includes(r.cls) ? 7 : 6;
     const d = pathD(r.pts);
     P.push(`<path d="${d}" fill="none" stroke="${C_EDGE}" stroke-width="${(w + 1.6).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>`);
     P.push(`<path d="${d}" fill="none" stroke="${C_MAIN}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`);
@@ -260,7 +300,9 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half) {
     return cands;
   }
 
-  function labelAlong(name, mpts, size) {
+  function labelAlong(name, mpts, cls) {
+    // Label jalan PUTIH TEBAL di atas badan jalan (seperti contoh).
+    const size = MAIN_CLS.has(cls) ? 6 : 5;
     const cands = segCandidates(mpts);
     if (!cands.length || cands[0][0] < 12) return ["", null];
     // Nama jalan di OSM kadang pendek ("Cifor"); bila alamat/URL menyebut
@@ -285,7 +327,7 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half) {
     }
     if (!chosen) return ["", null];
     const [mx, my, ang, hext, vext, box] = chosen;
-    const svg = `<text x="${mx.toFixed(1)}" y="${my.toFixed(1)}" text-anchor="middle" transform="rotate(${ang.toFixed(1)} ${mx.toFixed(1)} ${my.toFixed(1)})" font-family="Verdana, DejaVu Sans, sans-serif" font-size="${size}" fill="${C_LABEL}">${esc(txt)}</text>`;
+    const svg = `<text x="${mx.toFixed(1)}" y="${my.toFixed(1)}" text-anchor="middle" transform="rotate(${ang.toFixed(1)} ${mx.toFixed(1)} ${my.toFixed(1)})" font-family="Verdana, DejaVu Sans, sans-serif" font-size="${size}" font-weight="bold" fill="white">${esc(txt)}</text>`;
     const cx = (box[0] + box[2]) / 2, cy = (box[1] + box[3]) / 2;
     const cbox = [cx - (box[2] - box[0]) * 0.35, cy - (box[3] - box[1]) * 0.35,
                   cx + (box[2] - box[0]) * 0.35, cy + (box[3] - box[1]) * 0.35];
@@ -296,11 +338,11 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half) {
   for (const r of roads) {
     const vpts = r.pts.map(([mx, my]) => toVh(mx, my, half));
     const bl = Math.max(0, ...vpts.slice(0, -1).map((a, i) => Math.hypot(vpts[i + 1][0] - a[0], vpts[i + 1][1] - a[1])));
-    if (!bestLabel.has(r.name) || bl > bestLabel.get(r.name)[0]) bestLabel.set(r.name, [bl, r.pts]);
+    if (!bestLabel.has(r.name) || bl > bestLabel.get(r.name)[0]) bestLabel.set(r.name, [bl, r.pts, r.cls]);
   }
   const roadBoxes = [];
-  for (const [name, [, mpts]] of bestLabel) {
-    const [svg, box] = labelAlong(name, mpts, 7);
+  for (const [name, [, mpts, cls]] of bestLabel) {
+    const [svg, box] = labelAlong(name, mpts, cls);
     if (svg) P.push(svg);
     if (box) roadBoxes.push(box);
   }

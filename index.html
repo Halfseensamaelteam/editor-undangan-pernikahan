@@ -140,6 +140,31 @@
       </div>
     </div>
 
+    <div id="denahdlg" role="dialog" aria-label="Hasilkan Denah atau QR">
+      <div class="dd-inner">
+        <div class="dd-head">
+          <button class="back" id="ddClose" aria-label="Kembali">←</button>
+          <div class="fp-title">Hasilkan Denah / QR<small>Denah vektor digambar dari peta sekitar venue-mu</small></div>
+        </div>
+        <div class="dd-body">
+          <div class="segrow" id="ddModes" role="group" aria-label="Pilih hasil">
+            <button data-mode="denah" class="seg">Denah saja</button>
+            <button data-mode="qr" class="seg">QR saja</button>
+            <button data-mode="both" class="seg on">Denah + QR</button>
+          </div>
+          <label class="dd-lbl" for="ddInput">Alamat atau link Google Maps</label>
+          <textarea id="ddInput" rows="3" placeholder="Contoh: Heritage Garden Venue, Setu, Cipayung — atau tempel link panjang google.com/maps"></textarea>
+          <p class="hint">Hasilnya ditaruh di tempat kode QR sekarang, di halaman tempat QR itu berada (di template CL: halaman 2) — setelah selesai, editor otomatis pindah ke halaman itu. Denah dibuat dari data peta OpenStreetMap, jadi perlu internet — kecuali venue Heritage yang denahnya sudah tersedia di editor.</p>
+          <p class="dd-err" id="ddErr" role="alert"></p>
+          <p class="dd-status" id="ddStatus" role="status"></p>
+        </div>
+        <div class="fp-foot">
+          <span id="ddFootNote">Denah di atas, QR di bawahnya, di area QR</span>
+          <button id="ddGo">Hasilkan</button>
+        </div>
+      </div>
+    </div>
+
     <textarea id="textedit" aria-label="Edit teks"></textarea>
     <button id="exitPreview">Selesai · Kembali Edit</button>
     <div id="toast" role="status"></div>
@@ -159,6 +184,7 @@
     <script src="assets/src/js/panel.js"></script>
     <script src="assets/src/js/picker.js"></script>
     <script src="assets/src/js/export.js"></script>
+    <script src="assets/src/js/denah.js"></script>
 
   </body>
 </html>

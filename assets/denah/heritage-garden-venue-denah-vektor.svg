@@ -535,31 +535,29 @@
 <path d="M54.9,162.9 L47.4,160.8" fill="none" stroke="#6E4A2F" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M32.7,251.2 L99.3,204.1 L115.2,180.2 L127.0,117.4 L140.7,76.6 L153.1,55.3 L165.0,43.7 L216.9,33.1 L240.1,14.8 L244.0,-11.5" fill="none" stroke="#5A3A22" stroke-width="7.6" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M32.7,251.2 L99.3,204.1 L115.2,180.2 L127.0,117.4 L140.7,76.6 L153.1,55.3 L165.0,43.7 L216.9,33.1 L240.1,14.8 L244.0,-11.5" fill="none" stroke="#6E4A2F" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="66.0" y="210.5" text-anchor="middle" transform="rotate(-35.2 66.0 210.5)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="6" font-weight="bold" fill="white">Jl. Setu Cipayung</text>
-<text x="83.5" y="155.6" text-anchor="middle" transform="rotate(19.9 83.5 155.6)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="5" font-weight="bold" fill="white">Jl. Bambu Petung</text>
-<text x="147.1" y="33.2" text-anchor="middle" transform="rotate(83.4 147.1 33.2)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="5" font-weight="bold" fill="white">Jl. Kramat Aris</text>
-<text x="218.0" y="11.4" text-anchor="middle" transform="rotate(13.5 218.0 11.4)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="5" font-weight="bold" fill="white">Gg. Waris</text>
-<text x="201.0" y="28.4" text-anchor="middle" transform="rotate(67.3 201.0 28.4)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="5" font-weight="bold" fill="white">Jl. Puskesmas</text>
-<text x="121.7" y="34.7" text-anchor="middle" transform="rotate(7.4 121.7 34.7)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="5" font-weight="bold" fill="white">Jl. Bambu Wulung</text>
-<text x="75.8" y="166.7" text-anchor="middle" transform="rotate(-51.4 75.8 166.7)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="5" font-weight="bold" fill="white">Gg. Mawar I</text>
-<text x="29.0" y="223.5" text-anchor="middle" transform="rotate(39.6 29.0 223.5)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="5" font-weight="bold" fill="white">Jl. Tugu</text>
-<text x="91.1" y="195.5" text-anchor="middle" transform="rotate(16.2 91.1 195.5)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="5" font-weight="bold" fill="white">Gg. Karya Dugel</text>
-<text x="84.7" y="177.9" text-anchor="middle" transform="rotate(-66.5 84.7 177.9)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="5" font-weight="bold" fill="white">Gg. Karya</text>
-<text x="55.4" y="159.2" text-anchor="middle" transform="rotate(-83.0 55.4 159.2)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="5" font-weight="bold" fill="white">Gg. Mawar Indah</text>
-<text x="31.7" y="205.2" text-anchor="middle" transform="rotate(-48.5 31.7 205.2)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="5" font-weight="bold" fill="white">Gg. Masjid Al Hikmah</text>
-<text x="36.1" y="33.0" text-anchor="middle" transform="rotate(-77.8 36.1 33.0)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="5" font-weight="bold" fill="white">Jl. Gebang Sari</text>
-<text x="103.0" y="211.0" text-anchor="middle" transform="rotate(-72.5 103.0 211.0)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="5" font-weight="bold" fill="white">Jl. Ralind II</text>
-<text x="48.1" y="7.6" text-anchor="middle" transform="rotate(-0.1 48.1 7.6)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="5" font-weight="bold" fill="white">Jl. Gebang Sari Dalam I</text>
-<text x="63.3" y="43.1" text-anchor="middle" transform="rotate(-71.2 63.3 43.1)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="5" font-weight="bold" fill="white">Jl. Gebang Sari Dalam</text>
-<text x="42.9" y="111.0" text-anchor="middle" transform="rotate(-83.4 42.9 111.0)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="5" font-weight="bold" fill="white">Jl. Haji Liah</text>
-<text x="65.2" y="156.7" text-anchor="middle" transform="rotate(-50.7 65.2 156.7)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="5" font-weight="bold" fill="white">Gg. Mawar. 2</text>
-<g fill="#6B4A2F"><circle cx="111.0" cy="159.9" r="7"/><rect x="109.6" y="154.9" width="2.8" height="10" fill="#F2F2F5"/><rect x="106.0" y="158.5" width="10" height="2.8" fill="#F2F2F5"/></g>
-<g fill="#6B4A2F"><polygon points="90.6,176.0 104.6,176.0 97.6,169.0"/><path d="M93.1 177.0 V181.0 H102.1 V177.0" /><circle cx="104.6" cy="178.0" r="1.4"/></g>
-<g fill="#6B4A2F"><circle cx="110.8" cy="46.5" r="6.5"/><rect x="104.3" y="46.5" width="13" height="4"/><rect x="109.3" y="37.5" width="3" height="9"/><circle cx="110.8" cy="36.5" r="2.5"/></g>
-<g stroke="#6B4A2F" stroke-width="1.5" fill="none"><path d="M48.6 173.6 H60.6 M49.6 173.6 V166.6 M54.6 173.6 V166.6 M59.6 173.6 V166.6 M47.6 166.6 H61.6 M48.6 163.6 H60.6"/></g>
-<g fill="#6B4A2F"><polygon points="25.3,150.3 39.3,150.3 32.3,143.3"/><path d="M27.8 151.3 V155.3 H36.8 V151.3" /><circle cx="39.3" cy="152.3" r="1.4"/></g>
-<text x="124.0" y="164.9" text-anchor="start" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Klinik Prima</text>
-<text x="124.0" y="172.9" text-anchor="start" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Medistra</text>
+<text x="121.1" y="148.8" text-anchor="middle" transform="rotate(-79.4 121.1 148.8)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="5" font-weight="bold" fill="white">Jl. Setu Cipayung</text>
+<text x="83.5" y="155.6" text-anchor="middle" transform="rotate(19.9 83.5 155.6)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="4" font-weight="bold" fill="white">Jl. Bambu Petung</text>
+<text x="147.1" y="27.6" text-anchor="middle" transform="rotate(83.4 147.1 27.6)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="4" font-weight="bold" fill="white">Jl. Kramat Aris</text>
+<text x="221.4" y="10.1" text-anchor="middle" transform="rotate(13.5 221.4 10.1)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="4" font-weight="bold" fill="white">Gg. Waris</text>
+<text x="201.0" y="25.7" text-anchor="middle" transform="rotate(67.3 201.0 25.7)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="4" font-weight="bold" fill="white">Jl. Puskesmas</text>
+<text x="121.7" y="34.7" text-anchor="middle" transform="rotate(7.4 121.7 34.7)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="4" font-weight="bold" fill="white">Jl. Bambu Wulung</text>
+<text x="75.8" y="166.7" text-anchor="middle" transform="rotate(-51.4 75.8 166.7)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="4" font-weight="bold" fill="white">Gg. Mawar I</text>
+<text x="29.0" y="225.8" text-anchor="middle" transform="rotate(39.6 29.0 225.8)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="4" font-weight="bold" fill="white">Jl. Tugu</text>
+<text x="91.1" y="195.5" text-anchor="middle" transform="rotate(16.2 91.1 195.5)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="4" font-weight="bold" fill="white">Gg. Karya Dugel</text>
+<text x="84.7" y="177.9" text-anchor="middle" transform="rotate(-66.5 84.7 177.9)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="4" font-weight="bold" fill="white">Gg. Karya</text>
+<text x="55.4" y="159.2" text-anchor="middle" transform="rotate(-83.0 55.4 159.2)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="4" font-weight="bold" fill="white">Gg. Mawar Indah</text>
+<text x="26.4" y="211.2" text-anchor="middle" transform="rotate(-48.5 26.4 211.2)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="4" font-weight="bold" fill="white">Gg. Masjid Al Hikmah</text>
+<text x="36.1" y="27.4" text-anchor="middle" transform="rotate(-77.8 36.1 27.4)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="4" font-weight="bold" fill="white">Jl. Gebang Sari</text>
+<text x="103.0" y="215.8" text-anchor="middle" transform="rotate(-72.5 103.0 215.8)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="4" font-weight="bold" fill="white">Jl. Ralind II</text>
+<text x="39.5" y="7.0" text-anchor="middle" transform="rotate(-0.1 39.5 7.0)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="4" font-weight="bold" fill="white">Jl. Gebang Sari Dalam I</text>
+<text x="63.3" y="35.5" text-anchor="middle" transform="rotate(-71.2 63.3 35.5)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="4" font-weight="bold" fill="white">Jl. Gebang Sari Dalam</text>
+<text x="42.9" y="111.0" text-anchor="middle" transform="rotate(-83.4 42.9 111.0)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="4" font-weight="bold" fill="white">Jl. Haji Liah</text>
+<text x="65.2" y="156.7" text-anchor="middle" transform="rotate(-50.7 65.2 156.7)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="4" font-weight="bold" fill="white">Gg. Mawar. 2</text>
+<g transform="translate(111.0 161.9) scale(0.75) translate(-111.0 -161.9)"><g fill="#6B4A2F"><circle cx="111.0" cy="159.9" r="7"/><rect x="109.6" y="154.9" width="2.8" height="10" fill="#F2F2F5"/><rect x="106.0" y="158.5" width="10" height="2.8" fill="#F2F2F5"/></g></g>
+<g transform="translate(97.6 177.0) scale(0.75) translate(-97.6 -177.0)"><g fill="#6B4A2F"><polygon points="90.6,176.0 104.6,176.0 97.6,169.0"/><path d="M93.1 177.0 V181.0 H102.1 V177.0" /><circle cx="104.6" cy="178.0" r="1.4"/></g></g>
+<g transform="translate(110.8 48.5) scale(0.75) translate(-110.8 -48.5)"><g fill="#6B4A2F"><circle cx="110.8" cy="46.5" r="6.5"/><rect x="104.3" y="46.5" width="13" height="4"/><rect x="109.3" y="37.5" width="3" height="9"/><circle cx="110.8" cy="36.5" r="2.5"/></g></g>
+<g transform="translate(54.6 169.6) scale(0.75) translate(-54.6 -169.6)"><g stroke="#6B4A2F" stroke-width="1.5" fill="none"><path d="M48.6 173.6 H60.6 M49.6 173.6 V166.6 M54.6 173.6 V166.6 M59.6 173.6 V166.6 M47.6 166.6 H61.6 M48.6 163.6 H60.6"/></g></g>
+<g transform="translate(32.3 151.3) scale(0.75) translate(-32.3 -151.3)"><g fill="#6B4A2F"><polygon points="25.3,150.3 39.3,150.3 32.3,143.3"/><path d="M27.8 151.3 V155.3 H36.8 V151.3" /><circle cx="39.3" cy="152.3" r="1.4"/></g></g>
 <g><ellipse cx="120.0" cy="118.0" rx="11" ry="11" fill="#C0392B" stroke="white" stroke-width="1.5"/><polygon points="114.0,124.0 126.0,124.0 120.0,134.0" fill="#C0392B"/><circle cx="120.0" cy="118.0" r="4" fill="white"/></g>
 <rect x="92.4" y="76.0" width="83.2" height="28.0" rx="7" fill="#C0392B"/>
 <text x="134.0" y="87.0" text-anchor="middle" font-family="Verdana, DejaVu Sans, sans-serif" font-size="8" font-weight="bold" fill="white">Heritage</text>

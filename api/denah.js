@@ -316,7 +316,7 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half) {
 
   function labelAlong(name, mpts, cls) {
     // Label jalan PUTIH TEBAL di atas badan jalan (seperti contoh).
-    const size = MAIN_CLS.has(cls) ? 6 : 5;
+    const size = MAIN_CLS.has(cls) ? 5 : 4;
     const cands = segCandidates(mpts);
     if (!cands.length || cands[0][0] < 12) return ["", null];
     // Nama jalan di OSM kadang pendek ("Cifor"); bila alamat/URL menyebut
@@ -463,7 +463,7 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half) {
     const [x, y] = toVh(p.mx, p.my, half);
     if (iconsDrawn.some(([ix, iy]) => Math.hypot(x - ix, y - iy) < 20)) continue;
     iconsDrawn.push([x, y]);
-    P.push(ICONS[p.kind](x, y));
+    P.push(`<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(0.75) translate(${(-x).toFixed(1)} ${(-y).toFixed(1)})">${ICONS[p.kind](x, y)}</g>`);
     placedPois.push([p, x, y]);
     boxes.push([x - 10, y - 14, x + 10, y + 8]);
   }
@@ -483,7 +483,7 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half) {
       if (overlaps(b)) continue;
       boxes.push(b);
       for (let i = 0; i < lines.length; i++) {
-        P.push(`<text x="${lx.toFixed(1)}" y="${(ly + i * 8).toFixed(1)}" text-anchor="${anchor}" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="${C_LABEL}">${esc(lines[i])}</text>`);
+        P.push(`<text x="${lx.toFixed(1)}" y="${(ly + i * 8).toFixed(1)}" text-anchor="${anchor}" font-family="Verdana, DejaVu Sans, sans-serif" font-size="4" fill="${C_LABEL}">${esc(lines[i])}</text>`);
       }
       break;
     }

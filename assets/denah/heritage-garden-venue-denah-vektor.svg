@@ -1,25 +1,69 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 240 240" width="240" height="240">
-<rect x="0" y="0" width="240" height="240" fill="#FDFBF3"/>
-<path d="M-11.0,145.9 L17.5,148.8 L29.1,140.5 L43.2,150.5 L70.0,150.8 L97.0,160.5 L121.0,160.7" fill="none" stroke="#C9C2B2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M146.8,-15.7 L149.2,38.3" fill="none" stroke="#C9C2B2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M207.9,-15.6 L196.5,14.8 L205.6,36.5" fill="none" stroke="#C9C2B2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M45.7,32.3 L-5.6,22.9" fill="none" stroke="#C9C2B2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M94.2,31.1 L92.3,31.0" fill="none" stroke="#C9C2B2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M165.0,43.7 L94.2,31.1" fill="none" stroke="#C9C2B2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M-17.5,125.6 L-17.4,126.4" fill="none" stroke="#C9C2B2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M92.3,31.0 L57.6,25.9 L45.7,32.3" fill="none" stroke="#C9C2B2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M32.7,251.2 L99.3,204.1 L115.2,180.2 L127.0,117.4 L140.7,76.6 L153.1,55.3 L165.0,43.7 L216.9,33.1 L240.1,14.8 L244.0,-11.5" fill="none" stroke="#A89F8C" stroke-width="7.1" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M32.7,251.2 L99.3,204.1 L115.2,180.2 L127.0,117.4 L140.7,76.6 L153.1,55.3 L165.0,43.7 L216.9,33.1 L240.1,14.8 L244.0,-11.5" fill="none" stroke="#E07856" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="121.1" y="148.8" text-anchor="middle" transform="rotate(-79.4 121.1 148.8)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#6E6759">Jl. Setu Cipayung</text>
-<text x="129.6" y="37.4" text-anchor="middle" transform="rotate(10.1 129.6 37.4)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="6.5" fill="#6E6759">Jl. Bambu Wulung</text>
-<line x1="118.7" y1="135.3" x2="102.7" y2="139.3" stroke="#8A8378" stroke-width="1"/>
-<circle cx="118.7" cy="135.3" r="1.8" fill="#2E7D6B"/>
-<g fill="#2E7D6B"><circle cx="102.7" cy="137.3" r="6.5"/><rect x="96.2" y="137.3" width="13.0" height="4.0"/><rect x="101.2" y="128.3" width="3.0" height="9.0"/><circle cx="102.7" cy="127.3" r="2.5"/></g>
-<text x="90.7" y="141.3" text-anchor="end" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" font-weight="bold" fill="#4A4438">Masjid Nurul Falah</text>
-<g fill="#8A5A2B"><rect x="120.6" y="17.6" width="12.0" height="6.0"/><polygon points="119.1,17.6 134.1,17.6 126.6,10.6"/><rect x="125.6" y="5.6" width="2.0" height="6.0"/><rect x="123.6" y="7.6" width="6.0" height="2.0"/></g>
-<text x="136.6" y="21.6" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" font-weight="bold" fill="#4A4438">Gereja Katolik</text>
-<g fill="#3E6FB0"><polygon points="23.9,154.6 35.9,154.6 29.9,145.6"/><rect x="23.9" y="154.6" width="12.0" height="2.0"/></g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">
+<rect x="0" y="0" width="240" height="240" fill="#F8F4EB"/>
+<path d="M-11.0,145.9 L17.5,148.8 L29.1,140.5 L43.2,150.5 L70.0,150.8 L97.0,160.5 L121.0,160.7" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M146.8,-15.7 L145.0,2.3 L149.2,38.3" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M136.6,87.0 L108.9,86.6" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M241.1,12.2 L213.7,5.7" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M207.9,-15.6 L196.5,14.8 L205.6,36.5" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M45.7,32.3 L-5.6,22.9" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M57.6,176.0 L67.2,177.5 L84.4,155.9" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M61.3,231.0 L59.6,229.1" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M54.3,235.6 L39.3,222.8" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M13.3,215.9 L-2.7,207.7" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M78.8,191.9 L103.4,199.0" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M92.8,159.3 L76.6,196.5 L70.6,194.1" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M56.5,150.3 L54.3,168.1" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M-15.4,210.6 L-5.2,195.6 L2.7,198.6 L9.8,190.2" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M44.8,241.9 L13.3,215.9 L4.4,220.8 L-17.5,209.8" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M-10.4,251.6 L9.1,229.5" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M94.2,31.1 L92.3,31.0" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M165.0,43.7 L149.2,38.3 L94.2,31.1" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M33.2,30.4 L39.0,3.8 L39.2,-14.0" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M68.0,249.2 L56.0,234.5" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M107.3,226.3 L98.7,253.8 L70.3,255.4" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M-17.8,-3.3 L-10.2,3.4 L28.6,3.4 L38.2,6.8" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M59.6,26.2 L66.9,4.7 L66.8,-6.6 L70.4,-10.6" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M15.1,27.2 L9.7,42.3" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M32.2,123.0 L41.7,121.6 L44.1,100.4" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M70.0,150.8 L60.4,162.6" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M92.3,31.0 L57.6,25.9 L45.7,32.3" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M59.6,229.1 L47.2,220.0" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M19.8,239.0 L32.7,251.2" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M9.1,229.5 L19.8,239.0" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M9.8,190.2 L14.7,186.2 L21.5,186.8" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M99.3,204.1 L111.2,214.1 L107.3,226.3" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M54.9,162.9 L47.4,160.8" fill="none" stroke="#B08D5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M32.7,251.2 L99.3,204.1 L115.2,180.2 L127.0,117.4 L140.7,76.6 L153.1,55.3 L165.0,43.7 L216.9,33.1 L240.1,14.8 L244.0,-11.5" fill="none" stroke="#6E4520" stroke-width="6.1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M32.7,251.2 L99.3,204.1 L115.2,180.2 L127.0,117.4 L140.7,76.6 L153.1,55.3 L165.0,43.7 L216.9,33.1 L240.1,14.8 L244.0,-11.5" fill="none" stroke="#8B5A2B" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="66.0" y="207.4" text-anchor="middle" transform="rotate(-35.2 66.0 207.4)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Jl. Setu Cipayung</text>
+<text x="83.5" y="155.6" text-anchor="middle" transform="rotate(19.9 83.5 155.6)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Jl. Bambu Petung</text>
+<text x="212.1" y="13.7" text-anchor="middle" transform="rotate(13.5 212.1 13.7)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Gg. Waris</text>
+<text x="201.0" y="36.6" text-anchor="middle" transform="rotate(67.3 201.0 36.6)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Jl. Puskesmas</text>
+<text x="121.7" y="34.7" text-anchor="middle" transform="rotate(7.4 121.7 34.7)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Jl. Bambu Wulung</text>
+<text x="75.8" y="166.7" text-anchor="middle" transform="rotate(-51.4 75.8 166.7)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Gg. Mawar I</text>
+<text x="29.0" y="219.5" text-anchor="middle" transform="rotate(39.6 29.0 219.5)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Jl. Tugu</text>
+<text x="91.1" y="195.5" text-anchor="middle" transform="rotate(16.2 91.1 195.5)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Gg. Karya Dugel</text>
+<text x="84.7" y="177.9" text-anchor="middle" transform="rotate(-66.5 84.7 177.9)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Gg. Karya</text>
+<text x="55.4" y="159.2" text-anchor="middle" transform="rotate(-83.0 55.4 159.2)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Gg. Mawar Indah</text>
+<text x="41.0" y="194.9" text-anchor="middle" transform="rotate(-48.5 41.0 194.9)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Gg. Masjid Al Hikmah</text>
+<text x="36.1" y="42.7" text-anchor="middle" transform="rotate(-77.8 36.1 42.7)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Jl. Gebang Sari</text>
+<text x="103.0" y="202.7" text-anchor="middle" transform="rotate(-72.5 103.0 202.7)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Jl. Ralind II</text>
+<text x="63.0" y="8.6" text-anchor="middle" transform="rotate(-0.1 63.0 8.6)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Jl. Gebang Sari Dalam I</text>
+<text x="63.3" y="56.2" text-anchor="middle" transform="rotate(-71.2 63.3 56.2)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Jl. Gebang Sari Dalam</text>
+<text x="42.9" y="111.0" text-anchor="middle" transform="rotate(-83.4 42.9 111.0)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Jl. Haji Liah</text>
+<text x="65.2" y="156.7" text-anchor="middle" transform="rotate(-50.7 65.2 156.7)" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Gg. Mawar. 2</text>
+<g fill="#6B4A2F"><circle cx="111.0" cy="159.9" r="7"/><rect x="109.6" y="154.9" width="2.8" height="10" fill="#F8F4EB"/><rect x="106.0" y="158.5" width="10" height="2.8" fill="#F8F4EB"/></g>
+<g fill="#6B4A2F"><polygon points="90.6,176.0 104.6,176.0 97.6,169.0"/><path d="M93.1 177.0 V181.0 H102.1 V177.0" /><circle cx="104.6" cy="178.0" r="1.4"/></g>
+<g fill="#6B4A2F"><circle cx="110.8" cy="46.5" r="6.5"/><rect x="104.3" y="46.5" width="13" height="4"/><rect x="109.3" y="37.5" width="3" height="9"/><circle cx="110.8" cy="36.5" r="2.5"/></g>
+<g stroke="#6B4A2F" stroke-width="1.5" fill="none"><path d="M48.6 173.6 H60.6 M49.6 173.6 V166.6 M54.6 173.6 V166.6 M59.6 173.6 V166.6 M47.6 166.6 H61.6 M48.6 163.6 H60.6"/></g>
+<g fill="#6B4A2F"><polygon points="25.3,150.3 39.3,150.3 32.3,143.3"/><path d="M27.8 151.3 V155.3 H36.8 V151.3" /><circle cx="39.3" cy="152.3" r="1.4"/></g>
+<text x="124.0" y="164.9" text-anchor="start" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Klinik Prima</text>
+<text x="124.0" y="172.9" text-anchor="start" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" fill="#5C3D1E">Medistra</text>
 <g><ellipse cx="120.0" cy="118.0" rx="11" ry="11" fill="#C0392B" stroke="white" stroke-width="1.5"/><polygon points="114.0,124.0 126.0,124.0 120.0,134.0" fill="#C0392B"/><circle cx="120.0" cy="118.0" r="4" fill="white"/></g>
-<g><circle cx="222" cy="18" r="10" fill="white" stroke="#4A4438" stroke-width="1.2"/><polygon points="222,10 217,21 227,21" fill="#4A4438"/><text x="222" y="34" text-anchor="middle" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" font-weight="bold" fill="#4A4438">U</text></g>
-<rect x="1" y="1" width="238" height="238" fill="none" stroke="#B9B2A2" stroke-width="2"/>
+<rect x="92.4" y="76.0" width="83.2" height="28.0" rx="7" fill="#C0392B"/>
+<text x="134.0" y="87.0" text-anchor="middle" font-family="Verdana, DejaVu Sans, sans-serif" font-size="8" font-weight="bold" fill="white">Heritage</text>
+<text x="134.0" y="96.5" text-anchor="middle" font-family="Verdana, DejaVu Sans, sans-serif" font-size="8" font-weight="bold" fill="white">Garden Venue</text>
+<polygon points="115.0,104.0 125.0,104.0 120.0,108.0" fill="#C0392B"/>
+<g><circle cx="222" cy="18" r="10" fill="white" stroke="#5C3D1E" stroke-width="1.2"/><polygon points="222,10 217,21 227,21" fill="#5C3D1E"/><text x="222" y="34" text-anchor="middle" font-family="Verdana, DejaVu Sans, sans-serif" font-size="7" font-weight="bold" fill="#5C3D1E">U</text></g>
+<rect x="1" y="1" width="238" height="238" fill="none" stroke="#8B5A2B" stroke-width="2"/>
 </svg>

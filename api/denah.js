@@ -1,4 +1,4 @@
-// GET /api/denah?url=<Google Maps link>&address=<nama/alamat>&lat=<>&lon=<>
+// GET /api/denah?url=<Google Maps link>&address=<nama/alamat>&lat=<>&lon=<>&radius=<meter>
 // Mengembalikan denah lokasi sebagai SVG vektor (image/svg+xml).
 // Server yang mengambil data peta: HP customer hanya menerima SVG ~4 KB,
 // tanpa harus mengunduh data mentah OpenStreetMap atau menunggu Overpass.
@@ -8,8 +8,9 @@
 //     (link pendek maps.app.goo.gl diikuti redirect-nya di server,
 //     lalu koordinat dibaca dari URL akhir @lat,lng / !3d/!4d),
 //     atau dari geocode alamat (Nominatim, cadangan Photon).
-//  2. Ambil data jalan & patokan sekitar (±350 m) dari OSM API
-//     (api.openstreetmap.org/api/0.6/map.json) — cepat, tanpa Overpass.
+//  2. Ambil data jalan & patokan sekitar (±radius m, default 350 m)
+//     dari OSM API (api.openstreetmap.org/api/0.6/map.json) — cepat,
+//     tanpa Overpass. radius di-query dibatasi 100–1000 m.
 //  3. Bangun SVG vektor gaya contoh undangan (Awa Mangkuruku): jalan coklat,
 //     semua jalan berlabel, patokan beragam berikon coklat, venue = pin merah
 //     + bubble nama merah.
@@ -99,9 +100,10 @@ async function geocode(q) {
 }
 
 // --- data OSM --------------------------------------------------------
-async function fetchOsmBbox(lat, lon) {
+async function fetchOsmBbox(lat, lon, half) {
+  half = half || HALF;
   const KX = 111320 * Math.cos(lat * Math.PI / 180), KY = 110540;
-  const dLon = HALF / KX, dLat = HALF / KY;
+  const dLon = half / KX, dLat = half / KY;
   const bbox = [lon - dLon, lat - dLat, lon + dLon, lat + dLat]
     .map((v) => v.toFixed(6)).join(",");
   const r = await fetchTimeout(
@@ -555,13 +557,15 @@ module.exports = async (req, res) => {
       return;
     }
 
-    const data = await fetchOsmBbox(lat, lon);
+    // Jangkauan denah dari query (?radius=), default 350 m, dibatasi 100–1000 m.
+    const radius = Math.min(1000, Math.max(100, parseInt(q.radius || "350", 10) || 350));
+    const data = await fetchOsmBbox(lat, lon, radius);
     if (!data) { res.status(502).json({ error: "mapfail" }); return; }
     // Nama jalan lengkap dari alamat/URL, mis. "Jl. Raya Cifor".
     const srcText = nameSource;
     const rm = srcText.match(/Jl\.\s*[A-Za-z]+(?:\s+[A-Za-z]+)*?(?=\s+No\.|\s*,|\s*$)/);
     const venueName = (nameSource.split(",")[0] || "").trim() || null;
-    const svg = buildDenahSvg(lat, lon, data, rm ? rm[0].trim() : null, venueName);
+    const svg = buildDenahSvg(lat, lon, data, rm ? rm[0].trim() : null, venueName, radius);
     if (!svg) { res.status(502).json({ error: "mapfail" }); return; }
 
     res.setHeader("Content-Type", "image/svg+xml; charset=utf-8");

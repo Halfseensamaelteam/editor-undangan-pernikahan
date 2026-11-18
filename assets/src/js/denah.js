@@ -21,6 +21,11 @@ const GENUS_SVG_URL = "assets/denah/genus-coffee-boutique-denah-vektor.svg";
 const AWA_LL = { lat: -1.9101614, lon: 116.1930328 };
 const AWA_SVG_URL = "assets/denah/awa-mangkuruku-denah-vektor.svg";
 let ddMode = "both", heritageSvgPromise = null, genusSvgPromise = null, awaSvgPromise = null, ddBusy = false;
+let ddRadius = 350;
+const DD_RADIUS_OPTIONS = [200, 350, 450, 800];
+const DD_BUNDLED_RADIUS = { heritage: 450, genus: 350, awa: 350 };
+function ddNormalizeRadius(r) { const v = parseInt(r, 10); return (isFinite(v) && v >= 100 && v <= 1000) ? v : 350; }
+function ddGetRadius() { const el = typeof document !== "undefined" ? document.getElementById("ddRadius") : null; if (el && el.value) { ddRadius = ddNormalizeRadius(el.value); } return ddRadius; }
 
 function ddEsc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 function ddDistM(a, b) { const dx = (a.lon - b.lon) * 111320 * Math.cos(a.lat * Math.PI / 180), dy = (a.lat - b.lat) * 110540; return Math.hypot(dx, dy); }
@@ -80,7 +85,8 @@ const DD_OVERPASS_EPS = [
   "https://overpass.kumi.systems/api/interpreter",
   "https://overpass.nchc.org.tw/api/interpreter"
 ];
-async function ddOverpass(lat, lon, onProgress) {
+async function ddOverpass(lat, lon, onProgress, radius) {
+  const R = ddNormalizeRadius(radius != null ? radius : ddRadius);
   /* Query dibuat seringan mungkin: radius diperkecil (470→320 m, denah tetap
      terisi di tengah). Klausa way["building"] kini diambil lagi untuk
      poligon bangunan — dulu klausa itu dibuang karena membuat respons
@@ -95,7 +101,7 @@ async function ddOverpass(lat, lon, onProgress) {
      memang lambat merespons; status dialog menunjukkan server ke berapa yang
      sedang dicoba supaya pengguna tahu prosesnya masih berjalan. */
   const DD_AMEN = "place_of_worship|school|restaurant|fast_food|cafe|fuel|police|hospital|clinic|doctors|townhall|courthouse|bank";
-  const q = '[out:json][timeout:55];(way["highway"]["name"](around:320,' + lat + "," + lon + ');way["building"](around:320,' + lat + "," + lon + ');way["amenity"~"' + DD_AMEN + '"](around:320,' + lat + "," + lon + ');node["amenity"~"' + DD_AMEN + '"](around:320,' + lat + "," + lon + ');node["shop"~"convenience|supermarket|mall|department_store"](around:320,' + lat + "," + lon + '););out geom;';
+  const q = '[out:json][timeout:55];(way["highway"]["name"](around:' + R + ',' + lat + "," + lon + ');way["building"](around:' + R + ',' + lat + "," + lon + ');way["amenity"~"' + DD_AMEN + '"](around:' + R + ',' + lat + "," + lon + ');node["amenity"~"' + DD_AMEN + '"](around:' + R + ',' + lat + "," + lon + ');node["shop"~"convenience|supermarket|mall|department_store"](around:' + R + ',' + lat + "," + lon + '););out geom;';
   const body = "data=" + encodeURIComponent(q);
   for (let i = 0; i < DD_OVERPASS_EPS.length; i++) {
     if (onProgress) onProgress(i + 1, DD_OVERPASS_EPS.length);
@@ -142,11 +148,13 @@ function ddAwaUrl() {
    mengembalikan null untuk kegagalan APAPUN (404 di hosting tanpa
    function, timeout 10 detik, JSON error, isi bukan SVG) supaya pemanggil
    jatuh ke jalur lama. Tidak pernah melempar error. */
-async function ddTryApiDenah(input) {
+async function ddTryApiDenah(input, radius) {
   try {
+    const R = ddNormalizeRadius(radius != null ? radius : ddRadius);
     const params = new URLSearchParams();
     if (/^https?:\/\//i.test(input)) params.set("url", input);
     else params.set("address", ddQueryFromInput(input));
+    params.set("radius", String(R));
     const coords = ddCoordsFromLink(input);
     if (coords) { params.set("lat", String(coords.lat)); params.set("lon", String(coords.lon)); }
     if (!params.toString()) return null;
@@ -239,8 +247,8 @@ function ddClassifyPoi(t) {
   return null;
 }
 
-function ddBuildSvg(data, lat0, lon0, roadLabelOverride, venueName) {
-  const VB = 240, HALF = 450, KX = 111320 * Math.cos(lat0 * Math.PI / 180), KY = 110540, S = VB / (2 * HALF);
+function ddBuildSvg(data, lat0, lon0, roadLabelOverride, venueName, radius) {
+  const VB = 240, HALF = ddNormalizeRadius(radius != null ? radius : ddRadius), KX = 111320 * Math.cos(lat0 * Math.PI / 180), KY = 110540, S = VB / (2 * HALF);
   const proj = (lat, lon) => [(lon - lon0) * KX, (lat - lat0) * KY];
   const toVh = (mx, my) => [VB / 2 + mx * S, VB / 2 - my * S];
   const F = n => (Math.round(n * 10) / 10).toFixed(1);
@@ -552,20 +560,25 @@ function ddRoadOverride(input) {
 }
 
 function ddShortLink() { const e = new Error("shortlink"); e.shortlink = true; return e; }
-async function ddMakeDenah(input, onFallback) {
+async function ddMakeDenah(input, onFallback, radius) {
+  const R = ddNormalizeRadius(radius != null ? radius : ddRadius);
+  ddRadius = R;
   /* 1. Jalur instan — SVG yang dibundel, tanpa layanan peta apa pun.
+        Dipakai HANYA bila jangkauan terpilih sama dengan radius native
+        bundelnya (Heritage 450 m, Genus 350 m, Awa 350 m). Bila berbeda,
+        bundel dilewati dan denah dibuat lewat /api/denah dengan radius itu.
         Kecocokan nama, atau koordinat hasil parse link dalam 100 m. */
-  if (/heritage/i.test(input)) return ddHeritageUrl();
-  if (/genus/i.test(input)) return ddGenusUrl();
-  if (/awa mangkuruku/i.test(input)) return ddAwaUrl();
+  if (/heritage/i.test(input) && R === DD_BUNDLED_RADIUS.heritage) return ddHeritageUrl();
+  if (/genus/i.test(input) && R === DD_BUNDLED_RADIUS.genus) return ddGenusUrl();
+  if (/awa mangkuruku/i.test(input) && R === DD_BUNDLED_RADIUS.awa) return ddAwaUrl();
   const parsed = ddCoordsFromLink(input);
-  if (parsed && ddDistM(parsed, HERITAGE_LL) < 100) return ddHeritageUrl();
-  if (parsed && ddDistM(parsed, GENUS_LL) < 100) return ddGenusUrl();
-  if (parsed && ddDistM(parsed, AWA_LL) < 100) return ddAwaUrl();
+  if (parsed && ddDistM(parsed, HERITAGE_LL) < 100 && R === DD_BUNDLED_RADIUS.heritage) return ddHeritageUrl();
+  if (parsed && ddDistM(parsed, GENUS_LL) < 100 && R === DD_BUNDLED_RADIUS.genus) return ddGenusUrl();
+  if (parsed && ddDistM(parsed, AWA_LL) < 100 && R === DD_BUNDLED_RADIUS.awa) return ddAwaUrl();
   /* 2. Backend /api/denah — server mengambil data peta, HP hanya menerima
         SVG kecil. Link pendek juga hanya bisa dibaca di jalur ini (server
         mengikuti redirect-nya). Gagal apa pun → lanjut ke jalur lama. */
-  const apiUrl = await ddTryApiDenah(input);
+  const apiUrl = await ddTryApiDenah(input, R);
   if (apiUrl) return apiUrl;
   /* 3. Jalur lama di browser — perilaku tidak berubah. Link pendek tidak
         bisa dibaca browser, jadi berhenti di sini dengan penjelasannya
@@ -573,11 +586,11 @@ async function ddMakeDenah(input, onFallback) {
   if (ddIsShortLink(input)) throw ddShortLink();
   let coords = parsed;
   if (!coords) coords = await ddGeocode(ddQueryFromInput(input));
-  if (ddDistM(coords, HERITAGE_LL) < 100) return ddHeritageUrl();
-  if (ddDistM(coords, GENUS_LL) < 100) return ddGenusUrl();
-  if (ddDistM(coords, AWA_LL) < 100) return ddAwaUrl();
-  const data = await ddOverpass(coords.lat, coords.lon, onFallback);
-  const svg = ddBuildSvg(data, coords.lat, coords.lon, ddRoadOverride(input), ddVenueName(input));
+  if (ddDistM(coords, HERITAGE_LL) < 100 && R === DD_BUNDLED_RADIUS.heritage) return ddHeritageUrl();
+  if (ddDistM(coords, GENUS_LL) < 100 && R === DD_BUNDLED_RADIUS.genus) return ddGenusUrl();
+  if (ddDistM(coords, AWA_LL) < 100 && R === DD_BUNDLED_RADIUS.awa) return ddAwaUrl();
+  const data = await ddOverpass(coords.lat, coords.lon, onFallback, R);
+  const svg = ddBuildSvg(data, coords.lat, coords.lon, ddRoadOverride(input), ddVenueName(input), R);
   if (!svg) throw ddMapFail();
   return ddSvgUrl(svg);
 }
@@ -653,11 +666,17 @@ function ddSetMode(m) {
   document.querySelectorAll("#ddModes .seg").forEach(b => b.classList.toggle("on", b.dataset.mode === m));
   const n = $("ddFootNote");
   if (n) n.textContent = m === "denah" ? "Denah menggantikan QR di tempat yang sama" : m === "qr" ? "QR dibuat ulang di tempat yang sama" : "Denah di atas, QR di bawahnya, di area QR";
+  const rw = typeof document !== "undefined" ? document.getElementById("ddRadiusWrap") : null;
+  if (rw) rw.style.display = m === "qr" ? "none" : "";
+  const sel = typeof document !== "undefined" ? document.getElementById("ddRadius") : null;
+  if (sel && String(ddRadius) !== sel.value) sel.value = String(ddRadius);
 }
 function openDenahDialog() {
   const ex = ddFindQr().el, inp = $("ddInput");
   if (ex && ex.link) inp.value = ex.link;
   else if (!inp.value) { const d = CL_QRS(state.template); if (d && d.link) inp.value = d.link; }
+  const sel = document.getElementById("ddRadius");
+  if (sel) sel.value = String(ddRadius);
   ddSetMode(ddMode); ddShowErr(""); ddShowStatus("");
   $("denahdlg").classList.add("open");
   setTimeout(() => { try { inp.focus(); } catch (e) { /* abaikan */ } }, 60);
@@ -683,9 +702,10 @@ async function ddGenerate() {
     go.disabled = true; go.textContent = "Membuat…";
     ddShowStatus("Sedang mencari lokasi dan menggambar denah dari peta sekitar venue…");
     try {
+      const R = ddGetRadius();
       denahUrl = await ddMakeDenah(input, (n, total) => ddShowStatus(n <= 1
         ? "Menghubungi server peta 1 dari " + total + "… server peta publik kadang lambat — di koneksi pelan bisa sampai 1 menit, mohon ditunggu."
-        : "Server peta " + (n - 1) + " tidak merespons — mencoba server peta " + n + " dari " + total + "…"));
+        : "Server peta " + (n - 1) + " tidak merespons — mencoba server peta " + n + " dari " + total + "…"), R);
     } catch (e) {
       ddBusy = false; go.disabled = false; go.textContent = "Hasilkan"; ddShowStatus("");
       ddShowErr(e && e.shortlink
@@ -711,6 +731,7 @@ async function ddGenerate() {
 }
 if (typeof document !== "undefined" && document.querySelectorAll) {
   document.querySelectorAll("#ddModes .seg").forEach(b => b.addEventListener("click", () => ddSetMode(b.dataset.mode)));
+  const ddR = document.getElementById("ddRadius"); if (ddR) ddR.addEventListener("change", () => { ddRadius = ddNormalizeRadius(ddR.value); });
   const ddC = $("ddClose"); if (ddC) ddC.addEventListener("click", closeDenahDialog);
   const ddG = $("ddGo"); if (ddG) ddG.addEventListener("click", ddGenerate);
   const ddD = $("denahdlg"); if (ddD) ddD.addEventListener("click", e => { if (e.target === ddD) closeDenahDialog(); });

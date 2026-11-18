@@ -158,6 +158,16 @@
           </div>
           <label class="dd-lbl" for="ddInput">Alamat atau link Google Maps</label>
           <textarea id="ddInput" rows="3" placeholder="Contoh: Heritage Garden Venue, Setu, Cipayung — atau tempel link panjang google.com/maps"></textarea>
+          <div id="ddRadiusWrap">
+            <label class="dd-lbl" for="ddRadius">Jangkauan denah</label>
+            <select id="ddRadius" aria-label="Jangkauan denah">
+              <option value="200">200 m — sangat dekat, detail sekitar venue</option>
+              <option value="350" selected>350 m — standar</option>
+              <option value="450">450 m — lebih luas</option>
+              <option value="800">800 m — paling luas, jalan utama ikut terlihat</option>
+            </select>
+            <p class="hint">Jangkauan adalah jarak dari venue yang digambar di denah. Kecil (200 m) = fokus di sekitar lokasi; besar (800 m) = area lebih luas tapi detail lebih kecil.</p>
+          </div>
           <p class="hint">Hasilnya ditaruh di tempat kode QR sekarang, di halaman tempat QR itu berada (di template CL: halaman 2) — setelah selesai, editor otomatis pindah ke halaman itu. Denah dibuat dari data peta OpenStreetMap, jadi perlu internet — kecuali venue Heritage yang denahnya sudah tersedia di editor.</p>
           <p class="dd-err" id="ddErr" role="alert"></p>
           <p class="dd-status" id="ddStatus" role="status"></p>

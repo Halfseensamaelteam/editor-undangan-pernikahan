@@ -32,6 +32,12 @@ Website editor undangan pernikahan — customer edit template sendiri di HP, leb
 - Garis lipat: tick kecil di 25%/75% lebar halaman (hal. 2 saja); pembatas panel — teks tidak bisa melewati garis lipat saat digeser/di-resize.
 - **Cara melihat:** repo ini tidak dirender GitHub — buka `index.html` langsung di browser (klik dua kali / drag ke browser HP/komputer, butuh internet untuk font Google), atau deploy ke Vercel (situs statis murni: Framework Other, Root/Output `./`, Build/Install Command kosong, tanpa env var).
 
+## Update 2026-11-18: perbaikan font/teks, QR map, denah lokasi
+
+- **Font/teks diperbaiki (audit 75 template):** 113 potongan teks ganda yang menumpuk dihapus; ukuran font yang kebesaran diperbaiki (mis. CL19 "THE WEDDING OF", monogram "ZF" CL23, "RH" CLE9); huruf nama yang hilang dikembalikan ("ahri" → "Fahri"); font pengganti yang terlalu lebar diganti (nama CLE12 "Selia & Riski" kini Carattere). Times New Roman → Tinos dan Calibri → Carlito (lebar sama persis). Font kini dimuat lengkap sebelum render pertama, jadi teks tidak bergeser.
+- **QR map CL diregenerasi (border=4 + link dipersingkat):** QR lama border=2 cuma 1/30 lolos decode pada 120 px. Sekarang 30/30 lolos pada 120 px dan 150 px. 25 template Heritage kini memakai short link resmi Google Maps (https://maps.app.goo.gl/WEdiH5ciFrAFARYK7, tujuan sama); CL09/CL22/CL35 query dipangkas (venue sama); CL11 dipertahankan. Warna QR tidak berubah.
+- **Denah lokasi (baru, `assets/denah/`):** peta sketsa Heritage Garden Venue dari link Google Maps (koordinat dari short link di atas) + data OpenStreetMap — jalan digambar gaya sketsa, jalan utama ke venue ditebalkan, ada poligon rumah, patokan (Masjid Nurul Falah 58 m, Gereja Katolik Santo Yohanes Maria Vianney 379 m, SMP 237, SMPN 180, Klinik Prima Medistra, Sekolah Katolik Nusa Melati) dan panah ke patokan di luar frame beserta jaraknya. `heritage-garden-venue-denah-zoom.png` (±550 m, versi utama) dan `heritage-garden-venue-denah-sketsa.png` (±980 m, jangkauan lebih luas). Belum dipasang ke dalam editor — menunggu keputusan template mana dan penempatannya.
+
 ## Yang belum ada (draf, belum dibangun)
 
 1. **Autosave** — desain hilang kalau customer tutup tab / HP refresh di tengah edit. Rencana: simpan otomatis tiap edit + "Lanjutkan desain terakhir".

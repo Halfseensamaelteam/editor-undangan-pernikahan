@@ -271,10 +271,19 @@ module.exports = async (req, res) => {
     let nameSource = q.address || "";
     if (!Number.isFinite(lat) && q.url) {
       let finalUrl = q.url;
+      // Link pendek (maps.app.goo.gl) tidak boleh diikuti sampai ke
+      // google.com — halaman Google sering memblokir fetch server
+      // (consent page) sehingga URL akhirnya kehilangan nama tempat.
+      // Cukup baca header Location dari 302-nya: URL tujuan itu sudah
+      // memuat /place/<nama>/ yang bisa di-geocode.
       try {
-        // Ikuti redirect link pendek (maps.app.goo.gl) di server.
-        const r = await fetchTimeout(q.url, { redirect: "follow" }, 6000);
-        if (r && r.url) finalUrl = r.url;
+        const r = await fetchTimeout(q.url, { redirect: "manual" }, 5000);
+        const loc = r && r.headers && r.headers.get && r.headers.get("location");
+        if (loc) finalUrl = new URL(loc, q.url).toString();
+        else {
+          const r2 = await fetchTimeout(q.url, { redirect: "follow" }, 6000);
+          if (r2 && r2.url) finalUrl = r2.url;
+        }
       } catch {}
       nameSource = placeNameFromMapsUrl(finalUrl) || finalUrl;
       const c = coordsFromMapsUrl(finalUrl);

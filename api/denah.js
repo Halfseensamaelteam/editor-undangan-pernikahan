@@ -155,7 +155,7 @@ const C_BLD_FILL = "#FFFFFF", C_BLD_STROKE = "#6E4A2F", C_VENUE_BLD_FILL = "#EFE
 const C_HOUSE_FILL = "#ECECF1", C_HOUSE_STROKE = "#8A6A4A";
 // Setting poligon: total maks 500, gedung besar maks 60; rumah hanya yang
 // terdekat dengan venue (diurutkan jarak), bukan seluruh peta.
-const POLY_MAX = 500, LARGE_MAX = 60;
+const LARGE_MAX = 60, HOUSE_RADIUS_M = 120, HOUSE_MAX = 25;
 
 function toVh(mx, my, half) {
   return [VB / 2 + (mx * VB) / (2 * half), VB / 2 - (my * VB) / (2 * half)];
@@ -267,18 +267,15 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half, sca
   }
   buildings.sort((a, b) => b.area - a.area);
   const large = buildings.filter((b) => b.area >= 400).slice(0, LARGE_MAX);
-  const houses = buildings.filter((b) => b.area >= 60 && b.area < 400)
+  const houses = buildings.filter((b) => b.area >= 60 && b.area < 400 && b.dist <= HOUSE_RADIUS_M)
     .sort((a, b) => a.dist - b.dist)
-    .slice(0, Math.max(0, POLY_MAX - large.length));
+    .slice(0, HOUSE_MAX);
   let venueBld = null;
   const cands = [...large, ...houses];
   if (cands.length) {
     const near = cands.reduce((a, b) => (b.dist < a.dist ? b : a));
     if (near.dist < 60) venueBld = near;
   }
-  const drawList = [...houses.filter((b) => b !== venueBld), ...large.filter((b) => b !== venueBld)];
-  if (venueBld) drawList.push(venueBld);
-
   // Geometri bubble venue (dihitung duluan supaya label menghindarinya)
   let bubble = null;
   if (venueName) {
@@ -297,19 +294,32 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half, sca
   }).join(" L");
 
   const P = [`<rect x="0" y="0" width="${VB}" height="${VB}" fill="${C_BG}"/>`];
-  for (const b of drawList) {
+  // Poligon rumah (lapisan "houses").
+  P.push(`<g data-layer="houses">`);
+  for (const b of houses.filter((b) => b !== venueBld)) {
+    const vpts = b.pts.map(([mx, my]) => toVh(mx, my, half));
+    const ptsS = vpts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+    P.push(`<polygon points="${ptsS}" fill="${C_HOUSE_FILL}" stroke="${C_HOUSE_STROKE}" stroke-width="0.3" stroke-linejoin="round"/>`);
+  }
+  P.push(`</g>`);
+  // Gedung besar + gedung venue (lapisan "buildings").
+  P.push(`<g data-layer="buildings">`);
+  for (const b of [...large.filter((b) => b !== venueBld), ...(venueBld ? [venueBld] : [])]) {
     const vpts = b.pts.map(([mx, my]) => toVh(mx, my, half));
     const ptsS = vpts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
     let fill, stroke, sw;
     if (b === venueBld) { fill = C_VENUE_BLD_FILL; stroke = C_BLD_STROKE; sw = "0.7"; }
-    else if (b.area >= 400) { fill = C_BLD_FILL; stroke = C_BLD_STROKE; sw = "0.5"; }
-    else { fill = C_HOUSE_FILL; stroke = C_HOUSE_STROKE; sw = "0.3"; }
+    else { fill = C_BLD_FILL; stroke = C_BLD_STROKE; sw = "0.5"; }
     P.push(`<polygon points="${ptsS}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>`);
   }
+  P.push(`</g>`);
   // Jalan setapak: setelah poligon bangunan, sebelum jalan kendaraan.
+  P.push(`<g data-layer="footpaths">`);
   for (const f of footpaths) {
     P.push(`<path d="${pathD(f.pts)}" fill="none" stroke="#8A6A4A" stroke-width="1.5" stroke-dasharray="3 2" stroke-linecap="round" stroke-linejoin="round"/>`);
   }
+  P.push(`</g>`);
+  P.push(`<g data-layer="roads">`);
   for (const r of roads) {
     if (MAIN_CLS.has(r.cls)) continue;
     P.push(`<path d="${pathD(r.pts)}" fill="none" stroke="${C_MAIN}" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>`);
@@ -321,6 +331,7 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half, sca
     P.push(`<path d="${d}" fill="none" stroke="${C_EDGE}" stroke-width="${(w + 1.6).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>`);
     P.push(`<path d="${d}" fill="none" stroke="${C_MAIN}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`);
   }
+  P.push(`</g>`);
 
   function segCandidates(mpts) {
     const vpts = mpts.map(([mx, my]) => toVh(mx, my, half));
@@ -338,31 +349,40 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half, sca
 
   function labelAlong(name, mpts, cls) {
     // Label jalan PUTIH TEBAL di atas badan jalan (seperti contoh).
-    const size = (MAIN_CLS.has(cls) ? 5 : 4) * scale;
+    // Auto scaling: teks harus muat di dalam ruas jalan dan lebar badan jalan.
+    const baseSize = (MAIN_CLS.has(cls) ? 5 : 4) * scale;
+    const roadW = MAIN_CLS.has(cls) ? (["motorway", "primary", "secondary", "trunk"].includes(cls) ? 7 : 6) : 4.5;
     const cands = segCandidates(mpts);
     if (!cands.length || cands[0][0] < 12) return ["", null];
     // Nama jalan di OSM kadang pendek ("Cifor"); bila alamat/URL menyebut
     // nama lengkapnya ("Jl. Raya Cifor"), pakai nama lengkap itu.
     let txt = dispName(name);
     if (roadLabelOverride && roadLabelOverride.toLowerCase().includes(name.toLowerCase())) txt = roadLabelOverride;
-    const hw = textW(txt, size) / 2;
     let chosen = null;
     for (const [score, [[x1, y1], [x2, y2]], [mx0, my0]] of cands) {
       let ang = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
       if (ang > 90) ang -= 180;
       if (ang < -90) ang += 180;
+      // Auto-scale: kecilkan font sampai lebar teks muat di ruas jalan,
+      // dan tidak melebihi lebar badan jalan. Batas bawah 3.
+      const segLen = Math.hypot(x2 - x1, y2 - y1);
+      let s = baseSize;
+      const tw = textW(txt, s);
+      if (tw > segLen) s = Math.max(3, s * segLen / tw);
+      s = Math.min(s, roadW);
+      const hw = textW(txt, s) / 2;
       const ca = Math.abs(Math.cos(ang * Math.PI / 180)), sa = Math.abs(Math.sin(ang * Math.PI / 180));
-      const hext = ca * hw + sa * size / 2 + 3, vext = sa * hw + ca * size / 2 + 3;
+      const hext = ca * hw + sa * s / 2 + 3, vext = sa * hw + ca * s / 2 + 3;
       const mx = Math.min(Math.max(mx0, hext + 2), VB - hext - 2);
       const my = Math.min(Math.max(my0, vext + 2), VB - vext - 2);
       const box = [mx - hext, my - vext, mx + hext, my + vext];
       if (bubble && box[0] < bubble.x + bubble.w + 4 && box[2] > bubble.x - 4 &&
           box[1] < bubble.y + bubble.h + 4 && box[3] > bubble.y - 4) continue;
-      chosen = [mx, my, ang, hext, vext, box];
+      chosen = [mx, my, ang, hext, vext, box, s];
       break;
     }
     if (!chosen) return ["", null];
-    const [mx, my, ang, hext, vext, box] = chosen;
+    const [mx, my, ang, hext, vext, box, size] = chosen;
     const svg = `<text x="${mx.toFixed(1)}" y="${my.toFixed(1)}" text-anchor="middle" transform="rotate(${ang.toFixed(1)} ${mx.toFixed(1)} ${my.toFixed(1)})" font-family="Verdana, DejaVu Sans, sans-serif" font-size="${fmt(size)}" font-weight="bold" fill="white">${esc(txt)}</text>`;
     const cx = (box[0] + box[2]) / 2, cy = (box[1] + box[3]) / 2;
     const cbox = [cx - (box[2] - box[0]) * 0.35, cy - (box[3] - box[1]) * 0.35,
@@ -377,6 +397,7 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half, sca
     if (!bestLabel.has(r.name) || bl > bestLabel.get(r.name)[0]) bestLabel.set(r.name, [bl, r.pts, r.cls]);
   }
   const roadBoxes = [];
+  P.push(`<g data-layer="roadlabels">`);
   for (const [name, [, mpts, cls]] of bestLabel) {
     const [svg, box] = labelAlong(name, mpts, cls);
     if (svg) P.push(svg);
@@ -391,6 +412,7 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half, sca
     const ang = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
     P.push(`<g transform="translate(${mx.toFixed(1)} ${my.toFixed(1)}) rotate(${ang.toFixed(1)})"><polygon points="0,-3.2 7,0 0,3.2" fill="${C_BG}"/></g>`);
   }
+  P.push(`</g>`);
 
   // ---- POI ----
   const ICONS = {
@@ -481,6 +503,7 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half, sca
   const overlaps = (b) => boxes.some((o) => b[0] < o[2] + 3 && b[2] > o[0] - 3 && b[1] < o[3] + 3 && b[3] > o[1] - 3);
 
   const placedPois = [];
+  P.push(`<g data-layer="pois">`);
   for (const p of pois.slice(0, 6)) {
     const [x, y] = toVh(p.mx, p.my, half);
     if (iconsDrawn.some(([ix, iy]) => Math.hypot(x - ix, y - iy) < 20)) continue;
@@ -510,6 +533,7 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half, sca
       break;
     }
   }
+  P.push(`</g>`);
 
   // ---- venue: pin + bubble nama ----
   P.push(`<g><ellipse cx="${vx.toFixed(1)}" cy="${(vy - 2).toFixed(1)}" rx="11" ry="11" fill="${C_RED}" stroke="white" stroke-width="1.5"/>` +

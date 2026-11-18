@@ -75,7 +75,7 @@ async function geocodeNominatim(q) {
 
 async function geocodePhoton(q) {
   const r = await fetchTimeout(
-    "https://photon.komoot.io/api/?limit=1&lang=id&q=" + encodeURIComponent(q),
+    "https://photon.komoot.io/api/?limit=1&lang=en&q=" + encodeURIComponent(q),
     { headers: { "User-Agent": UA, Accept: "application/json" } }, 5000);
   if (!r.ok) return null;
   const j = await r.json();
@@ -85,8 +85,16 @@ async function geocodePhoton(q) {
 }
 
 async function geocode(q) {
-  try { const a = await geocodeNominatim(q); if (a) return a; } catch {}
-  try { return await geocodePhoton(q); } catch { return null; }
+  // Nominatim/Photon sering gagal pada alamat lengkap ("..., RT.01")
+  // tetapi berhasil pada nama venue saja ("Genus Coffee & Boutique").
+  const variants = [q];
+  const first = q.split(",")[0].trim();
+  if (first && first !== q) variants.push(first);
+  for (const v of variants) {
+    try { const a = await geocodeNominatim(v); if (a) return a; } catch {}
+    try { const b = await geocodePhoton(v); if (b) return b; } catch {}
+  }
+  return null;
 }
 
 // --- data OSM --------------------------------------------------------
@@ -269,10 +277,9 @@ module.exports = async (req, res) => {
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) { lat = NaN; lon = NaN; }
 
     let nameSource = q.address || "";
-    const dbg = q.debug === "1" ? {} : null;
     if (!Number.isFinite(lat) && q.url) {
       let finalUrl = q.url;
-      let resolveErr = null;
+
       // Link pendek (maps.app.goo.gl) tidak boleh diikuti sampai ke
       // google.com — halaman Google sering memblokir fetch server
       // (consent page) sehingga URL akhirnya kehilangan nama tempat.
@@ -286,8 +293,7 @@ module.exports = async (req, res) => {
           const r2 = await fetchTimeout(q.url, { redirect: "follow" }, 6000);
           if (r2 && r2.url) finalUrl = r2.url;
         }
-      } catch (e) { resolveErr = String(e && e.message || e); }
-      if (dbg) { dbg.finalUrl = finalUrl; dbg.resolveErr = resolveErr; }
+      } catch {}
       nameSource = placeNameFromMapsUrl(finalUrl) || finalUrl;
       const c = coordsFromMapsUrl(finalUrl);
       if (c) { lat = c.lat; lon = c.lon; }
@@ -301,9 +307,7 @@ module.exports = async (req, res) => {
       const g = await geocode(q.address);
       if (g) { lat = g.lat; lon = g.lon; }
     }
-    if (dbg) { dbg.placeName = nameSource; dbg.lat = Number.isFinite(lat) ? lat : null; dbg.lon = Number.isFinite(lon) ? lon : null; }
     if (!Number.isFinite(lat) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-      if (dbg) { res.status(404).json({ error: "notfound", debug: dbg }); return; }
       res.status(404).json({ error: "notfound" });
       return;
     }

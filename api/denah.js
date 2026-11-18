@@ -224,6 +224,21 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half, sca
     roads.push({ name: t.name, cls: t.highway, pts: simplify(mpts, 8), dist,
                  oneway: t.oneway === "yes" || t.oneway === "1" || t.oneway === "true" });
   }
+  // Jalan setapak (footway/path): digambar tipis putus-putus, tanpa nama/label.
+  const footpaths = [];
+  for (const e of data.elements || []) {
+    const t = e.tags || {};
+    if (e.type !== "way" || (t.highway !== "footway" && t.highway !== "path")) continue;
+    const mpts = [];
+    for (const nid of e.nodes || []) {
+      const n = nodes.get(nid);
+      if (!n) continue;
+      const [mx, my] = project(lat0, lon0, n[0], n[1]);
+      if (Math.abs(mx) <= half * 1.15 && Math.abs(my) <= half * 1.15) mpts.push([mx, my]);
+    }
+    if (mpts.length < 2) continue;
+    footpaths.push({ pts: simplify(mpts, 3) });
+  }
   if (!roads.length) return null;
 
   // Poligon bangunan (footprint OSM): hanya yang besar supaya blok terbaca,
@@ -290,6 +305,10 @@ function buildDenahSvg(lat0, lon0, data, roadLabelOverride, venueName, half, sca
     else if (b.area >= 400) { fill = C_BLD_FILL; stroke = C_BLD_STROKE; sw = "0.5"; }
     else { fill = C_HOUSE_FILL; stroke = C_HOUSE_STROKE; sw = "0.3"; }
     P.push(`<polygon points="${ptsS}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>`);
+  }
+  // Jalan setapak: setelah poligon bangunan, sebelum jalan kendaraan.
+  for (const f of footpaths) {
+    P.push(`<path d="${pathD(f.pts)}" fill="none" stroke="#8A6A4A" stroke-width="1.5" stroke-dasharray="3 2" stroke-linecap="round" stroke-linejoin="round"/>`);
   }
   for (const r of roads) {
     if (MAIN_CLS.has(r.cls)) continue;

@@ -269,8 +269,10 @@ module.exports = async (req, res) => {
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) { lat = NaN; lon = NaN; }
 
     let nameSource = q.address || "";
+    const dbg = q.debug === "1" ? {} : null;
     if (!Number.isFinite(lat) && q.url) {
       let finalUrl = q.url;
+      let resolveErr = null;
       // Link pendek (maps.app.goo.gl) tidak boleh diikuti sampai ke
       // google.com — halaman Google sering memblokir fetch server
       // (consent page) sehingga URL akhirnya kehilangan nama tempat.
@@ -284,7 +286,8 @@ module.exports = async (req, res) => {
           const r2 = await fetchTimeout(q.url, { redirect: "follow" }, 6000);
           if (r2 && r2.url) finalUrl = r2.url;
         }
-      } catch {}
+      } catch (e) { resolveErr = String(e && e.message || e); }
+      if (dbg) { dbg.finalUrl = finalUrl; dbg.resolveErr = resolveErr; }
       nameSource = placeNameFromMapsUrl(finalUrl) || finalUrl;
       const c = coordsFromMapsUrl(finalUrl);
       if (c) { lat = c.lat; lon = c.lon; }
@@ -298,7 +301,9 @@ module.exports = async (req, res) => {
       const g = await geocode(q.address);
       if (g) { lat = g.lat; lon = g.lon; }
     }
+    if (dbg) { dbg.placeName = nameSource; dbg.lat = Number.isFinite(lat) ? lat : null; dbg.lon = Number.isFinite(lon) ? lon : null; }
     if (!Number.isFinite(lat) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      if (dbg) { res.status(404).json({ error: "notfound", debug: dbg }); return; }
       res.status(404).json({ error: "notfound" });
       return;
     }

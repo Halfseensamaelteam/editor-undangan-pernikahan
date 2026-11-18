@@ -1,12 +1,21 @@
-/* Hasilkan Denah / QR — dialog + pembuat denah vektor langsung di browser.
-   Denah digambar dari data OpenStreetMap (geocode Nominatim/Photon + jalan/patokan dari Overpass),
-   dengan desain yang sama seperti denah vektor Heritage Garden Venue.
-   Semua layanan peta dicoba bergantian ke server cadangan kalau server pertamanya
-   gagal merespons — server Overpass utama sering menolak (406/429) atau timeout.
-   Venue Heritage memakai file SVG yang dibundel, tanpa perlu internet. */
+/* Hasilkan Denah / QR — dialog + pembuat denah vektor.
+   Urutan jalur pembuatan denah:
+   1. Jalur instan: venue yang denahnya sudah dibundel (Heritage, Genus)
+      langsung memakai file SVG lokal, tanpa fetch ke layanan peta.
+   2. Backend /api/denah (Vercel serverless, path relatif): server yang
+      mengambil data peta dan mengembalikan SVG kecil (~4 KB), jadi HP
+      customer tidak perlu mengunduh data mentah OSM / menunggu Overpass.
+      Backend juga bisa mengikuti redirect link pendek maps.app.goo.gl.
+   3. Jalur lama di browser (tetap dipertahankan sebagai cadangan bila
+      /api/denah tidak tersedia — mis. hosting tanpa function): geocode
+      Nominatim/Photon + jalan/patokan dari Overpass, dicoba bergantian
+      ke server cadangan kalau server pertamanya gagal merespons.
+   Semua jalur memakai desain denah vektor yang sama. */
 const HERITAGE_LL = { lat: -6.3215125, lon: 106.9070101 };
 const HERITAGE_SVG_URL = "assets/denah/heritage-garden-venue-denah-vektor.svg";
-let ddMode = "both", heritageSvgPromise = null, ddBusy = false;
+const GENUS_LL = { lat: -6.5611108, lon: 106.7494972 };
+const GENUS_SVG_URL = "assets/denah/genus-coffee-boutique-denah-vektor.svg";
+let ddMode = "both", heritageSvgPromise = null, genusSvgPromise = null, ddBusy = false;
 
 function ddEsc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 function ddDistM(a, b) { const dx = (a.lon - b.lon) * 111320 * Math.cos(a.lat * Math.PI / 180), dy = (a.lat - b.lat) * 110540; return Math.hypot(dx, dy); }
@@ -98,6 +107,35 @@ function ddHeritageUrl() {
       .catch(e => { heritageSvgPromise = null; throw e; });
   }
   return heritageSvgPromise;
+}
+function ddGenusUrl() {
+  if (!genusSvgPromise) {
+    genusSvgPromise = fetch(GENUS_SVG_URL)
+      .then(r => { if (!r.ok) throw new Error("genus " + r.status); return r.text(); })
+      .then(t => ddSvgUrl(t))
+      .catch(e => { genusSvgPromise = null; throw e; });
+  }
+  return genusSvgPromise;
+}
+/* Backend /api/denah (Vercel serverless) — dicoba SEBELUM jalur lama.
+   Mengembalikan data URL SVG bila server membalas 200 dengan isi SVG;
+   mengembalikan null untuk kegagalan APAPUN (404 di hosting tanpa
+   function, timeout 10 detik, JSON error, isi bukan SVG) supaya pemanggil
+   jatuh ke jalur lama. Tidak pernah melempar error. */
+async function ddTryApiDenah(input) {
+  try {
+    const params = new URLSearchParams();
+    if (/^https?:\/\//i.test(input)) params.set("url", input);
+    else params.set("address", ddQueryFromInput(input));
+    const coords = ddCoordsFromLink(input);
+    if (coords) { params.set("lat", String(coords.lat)); params.set("lon", String(coords.lon)); }
+    if (!params.toString()) return null;
+    const r = await ddFetch("api/denah?" + params.toString(), { headers: { Accept: "image/svg+xml" } }, 10000);
+    if (!r.ok) return null;
+    const t = await r.text();
+    if (!t || !t.replace(/^\s+/, "").startsWith("<svg")) return null;
+    return ddSvgUrl(t);
+  } catch (e) { return null; }
 }
 
 /* ---- Pembuat SVG denah (port dari make_denah_vector.py) ---- */
@@ -242,11 +280,28 @@ function ddBuildSvg(data, lat0, lon0) {
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">\n' + parts.join("\n") + "\n</svg>";
 }
 
+function ddShortLink() { const e = new Error("shortlink"); e.shortlink = true; return e; }
 async function ddMakeDenah(input, onFallback) {
+  /* 1. Jalur instan — SVG yang dibundel, tanpa layanan peta apa pun.
+        Kecocokan nama, atau koordinat hasil parse link dalam 100 m. */
   if (/heritage/i.test(input)) return ddHeritageUrl();
-  let coords = ddCoordsFromLink(input);
+  if (/genus/i.test(input)) return ddGenusUrl();
+  const parsed = ddCoordsFromLink(input);
+  if (parsed && ddDistM(parsed, HERITAGE_LL) < 100) return ddHeritageUrl();
+  if (parsed && ddDistM(parsed, GENUS_LL) < 100) return ddGenusUrl();
+  /* 2. Backend /api/denah — server mengambil data peta, HP hanya menerima
+        SVG kecil. Link pendek juga hanya bisa dibaca di jalur ini (server
+        mengikuti redirect-nya). Gagal apa pun → lanjut ke jalur lama. */
+  const apiUrl = await ddTryApiDenah(input);
+  if (apiUrl) return apiUrl;
+  /* 3. Jalur lama di browser — perilaku tidak berubah. Link pendek tidak
+        bisa dibaca browser, jadi berhenti di sini dengan penjelasannya
+        (sama seperti sebelum ada backend). */
+  if (ddIsShortLink(input)) throw ddShortLink();
+  let coords = parsed;
   if (!coords) coords = await ddGeocode(ddQueryFromInput(input));
   if (ddDistM(coords, HERITAGE_LL) < 100) return ddHeritageUrl();
+  if (ddDistM(coords, GENUS_LL) < 100) return ddGenusUrl();
   const data = await ddOverpass(coords.lat, coords.lon, onFallback);
   return ddSvgUrl(ddBuildSvg(data, coords.lat, coords.lon));
 }
@@ -344,10 +399,9 @@ async function ddGenerate() {
   }
   let denahUrl = null;
   if (ddMode !== "qr") {
-    if (ddIsShortLink(input)) {
-      ddShowErr("Link pendek (maps.app.goo.gl) tidak bisa dibaca browser untuk membuat denah. Tempel link panjang Google Maps (google.com/maps/…) atau ketik nama / alamat venue-nya.");
-      return;
-    }
+    /* Link pendek tidak lagi ditolak di depan: backend /api/denah bisa
+       mengikutinya di server. Penolakan lama hanya muncul bila backend
+       tidak tersedia DAN jalur lama yang menangani (error shortlink). */
     ddBusy = true;
     const go = $("ddGo");
     go.disabled = true; go.textContent = "Membuat…";
@@ -358,7 +412,9 @@ async function ddGenerate() {
         : "Server peta " + (n - 1) + " tidak merespons — mencoba server peta " + n + " dari " + total + "…"));
     } catch (e) {
       ddBusy = false; go.disabled = false; go.textContent = "Hasilkan"; ddShowStatus("");
-      ddShowErr(e && e.notfound
+      ddShowErr(e && e.shortlink
+        ? "Link pendek (maps.app.goo.gl) tidak bisa dibaca browser untuk membuat denah. Tempel link panjang Google Maps (google.com/maps/…) atau ketik nama / alamat venue-nya."
+        : e && e.notfound
         ? "Alamat itu tidak ditemukan di peta. Coba tulis nama tempat + daerahnya, mis. “Heritage Garden Venue, Setu, Cipayung”."
         : e && e.mapfail
           ? "Server peta sedang tidak bisa dihubungi — sudah dicoba beberapa server dan semuanya gagal merespons. Tunggu sebentar, lalu tekan Hasilkan lagi. Kalau tetap gagal, periksa internet."

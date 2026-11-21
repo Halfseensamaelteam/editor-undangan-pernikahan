@@ -1,7 +1,13 @@
-// GET /api/denah?url=<Google Maps link>&address=<nama/alamat>&lat=<>&lon=<>&radius=<meter>
+// GET /api/denah?url=<Google Maps link>&address=<nama/alamat>&lat=<>&lon=<>&radius=<meter>&name=<nama lokasi custom>
 // Mengembalikan denah lokasi sebagai SVG vektor (image/svg+xml).
 // Server yang mengambil data peta: HP customer hanya menerima SVG ~4 KB,
 // tanpa harus mengunduh data mentah OpenStreetMap atau menunggu Overpass.
+//
+// Nama lokasi (?name=): nama custom dari pengguna — prioritas tertinggi,
+// dipakai sebagai label bubble venue. Kalau tidak ada, dipakai nama tempat
+// dari /place/<nama>/ di URL atau alamat. JANGAN PERNAH pakai URL mentah
+// atau koordinat sebagai nama (itu bug lama: link tanpa /place/ membuat
+// label bubble jadi potongan URL/koordinat).
 //
 // Alur:
 //  1. Tentukan koordinat: dari lat/lon langsung, dari link Google Maps
@@ -585,7 +591,10 @@ module.exports = async (req, res) => {
           if (r2 && r2.url) finalUrl = r2.url;
         }
       } catch {}
-      nameSource = placeNameFromMapsUrl(finalUrl) || finalUrl;
+      // Nama tempat dari /place/<nama>/; kalau URL tidak memuat nama tempat
+      // (mis. link @lat,lng mentah), JANGAN pakai URL mentah sebagai nama —
+      // pakai alamat kalau ada, kalau tidak ada biarkan kosong (tanpa bubble).
+      nameSource = placeNameFromMapsUrl(finalUrl) || q.address || "";
       const c = coordsFromMapsUrl(finalUrl);
       if (c) { lat = c.lat; lon = c.lon; }
       else {
@@ -612,7 +621,14 @@ module.exports = async (req, res) => {
     // Nama jalan lengkap dari alamat/URL, mis. "Jl. Raya Cifor".
     const srcText = nameSource;
     const rm = srcText.match(/Jl\.\s*[A-Za-z]+(?:\s+[A-Za-z]+)*?(?=\s+No\.|\s*,|\s*$)/);
-    const venueName = (nameSource.split(",")[0] || "").trim() || null;
+    // Nama venue untuk bubble: nama custom (?name=) menang; kalau tidak ada,
+    // pakai bagian pertama nama tempat/alamat. Jaga-jaga: buang kalau masih
+    // berupa URL atau koordinat — lebih baik tanpa bubble daripada label salah.
+    let venueName = (q.name || "").trim() || null;
+    if (!venueName) {
+      venueName = (nameSource.split(",")[0] || "").trim() || null;
+      if (venueName && (/^https?:\/\//i.test(venueName) || /^-?\d+\.\d+/.test(venueName) || /^@-?\d/.test(venueName))) venueName = null;
+    }
     const svg = buildDenahSvg(lat, lon, data, rm ? rm[0].trim() : null, venueName, radius, scale);
     if (!svg) { res.status(502).json({ error: "mapfail" }); return; }
 
